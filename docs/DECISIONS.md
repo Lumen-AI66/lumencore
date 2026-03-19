@@ -349,3 +349,8 @@ eady is now only possible when a registry entry has both an explicit built-in ru
 - Decision: Expose `POST /api/input/command` as the only minimal external input abstraction in this phase, and implement it as a thin forwarder that constructs a canonical `CommandRunRequest` and invokes the existing `/api/command/run` handler logic with `command_text`, `tenant_id='owner'`, and `project_id='default'`.
 - Rationale: This adds one removable external-facing seam without duplicating parser, planner, validation, or execution logic, and preserves the Phase 24 requirement that all external command-style ingress stays anchored to the canonical command contract.
 
+## D-057 Phase 25 Removes External Input Route Coupling By Sharing One Command Execution Seam
+- Date: 2026-03-19
+- Decision: Route-level command execution logic is factored into a shared non-route callable in `lumencore/services/api/app/commands/command_runtime.py`, and both `/api/command/run` and `/api/input/command` invoke that callable.
+- Rationale: This removes route-to-route coupling without changing the canonical command contract, parser/planner ownership, execution branching, or response shape.
+

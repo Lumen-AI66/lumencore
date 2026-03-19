@@ -5,7 +5,7 @@ import logging
 from fastapi import APIRouter, status
 from pydantic import BaseModel, Field
 
-from ..routes.command import command_run
+from ..commands.command_runtime import execute_command_request
 from ..schemas.commands import CommandRunRequest, CommandRunResponse
 
 router = APIRouter(prefix="/api/input", tags=["input"])
@@ -19,7 +19,7 @@ class InputCommandRequest(BaseModel):
 @router.post("/command", response_model=CommandRunResponse, status_code=status.HTTP_202_ACCEPTED)
 def input_command(req: InputCommandRequest) -> CommandRunResponse:
     logger.info("External input ingress received via /api/input/command")
-    return command_run(
+    return execute_command_request(
         CommandRunRequest(
             command_text=req.input_text,
             tenant_id="owner",

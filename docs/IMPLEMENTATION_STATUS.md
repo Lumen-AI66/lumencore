@@ -1051,6 +1051,35 @@ Features:
 - One verified internal execution path is working end to end.
 - Future input layers should enter through the existing Lumencore control plane only; no standalone channel runtimes are approved.
 
+## Session Update - 2026-03-19 (Phase 25 Minimal Route Decoupling)
+### Files Inspected
+- `lumencore/services/api/app/routes/input.py`
+- `lumencore/services/api/app/routes/command.py`
+- `lumencore/services/api/app/commands/command_service.py`
+- `lumencore/services/api/app/commands/intent_parser.py`
+- `lumencore/services/api/app/commands/task_planner.py`
+- `lumencore/services/api/app/worker_tasks.py`
+
+### Files Changed
+- `lumencore/services/api/app/commands/command_runtime.py`
+- `lumencore/services/api/app/routes/command.py`
+- `lumencore/services/api/app/routes/input.py`
+- `docs/IMPLEMENTATION_STATUS.md`
+
+### Completed
+- Extracted the canonical command execution body below the route layer into `commands/command_runtime.py`.
+- Updated `/api/command/run` to call the shared execution seam instead of owning the command execution body directly.
+- Updated `/api/input/command` to call the same shared execution seam instead of importing and invoking the route function from `routes/command.py`.
+- Preserved request validation, error mapping, response shape, and canonical `status` command behavior.
+- Verified the touched modules compile successfully with `py_compile`.
+- No nearby test suite exists under `lumencore/services/api`, so no minimal local test file was adjusted in this pass.
+
+### Current Status
+- Route-to-route coupling between `input.py` and `command.py` is removed.
+- Both routes now share one non-route execution callable while keeping the same canonical pipeline and API contract.
+- No broader command-system redesign was introduced.
+
+
 ## Session Update - 2026-03-19 (Phase 25 Minimal External Input Attachment)
 ### Files Inspected
 - `lumencore/services/api/app/main.py`
