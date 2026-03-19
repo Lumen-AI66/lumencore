@@ -1,0 +1,24 @@
+from fastapi import FastAPI
+
+from .agents.agent_registry import ensure_agent_registry_seeded
+from .db import init_db, session_scope
+from .routes.agents import router as agents_router
+from .routes.health import router as health_router
+from .routes.jobs import router as jobs_router
+from .routes.system import router as system_router
+
+
+app = FastAPI(title="Lumencore API", version="4.0.0")
+
+
+@app.on_event("startup")
+def on_startup() -> None:
+    init_db()
+    with session_scope() as session:
+        ensure_agent_registry_seeded(session)
+
+
+app.include_router(health_router)
+app.include_router(system_router)
+app.include_router(jobs_router)
+app.include_router(agents_router)

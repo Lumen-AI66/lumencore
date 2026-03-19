@@ -1,0 +1,44 @@
+from __future__ import annotations
+
+from contextlib import contextmanager
+
+from sqlalchemy import create_engine, text
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session, declarative_base, sessionmaker
+
+from .config import settings
+
+
+engine = create_engine(settings.database_url, pool_pre_ping=True, future=True)
+SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
+Base = declarative_base()
+
+
+@contextmanager
+def session_scope() -> Session:
+    session = SessionLocal()
+    try:
+        yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
+def init_db() -> None:
+    # Import models lazily so metadata is populated before create_all.
+    from . import models  # noqa: F401
+
+    Base.metadata.create_all(bind=engine)
+
+
+def check_db() -> dict:
+    """Return status details without requiring any application tables."""
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return {"ok": True, "message": "database reachable"}
+    except SQLAlchemyError as exc:
+        return {"ok": False, "message": str(exc)}

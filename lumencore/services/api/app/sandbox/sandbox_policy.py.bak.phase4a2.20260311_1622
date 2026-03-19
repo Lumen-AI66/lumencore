@@ -1,0 +1,7 @@
+from __future__ import annotations
+
+from .sandbox_limits import SandboxLimits
+
+
+def default_sandbox_limits() -> SandboxLimits:
+    return SandboxLimits(False, False, False, False)

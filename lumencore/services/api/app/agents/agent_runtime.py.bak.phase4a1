@@ -1,0 +1,108 @@
+from __future__ import annotations
+
+from datetime import datetime, timezone
+import time
+
+from sqlalchemy.orm import Session
+
+from ..models import AgentRun, AgentRunStatus
+from .agent_policy import validate_agent_policy
+from .agent_router import resolve_agent_for_task
+
+
+SUPPORTED_AGENT_TASK_TYPES = {"agent.ping", "agent.echo"}
+
+
+def _execute_controlled_task(task_type: str, payload: dict) -> dict:
+    if task_type == "agent.ping":
+        return {
+            "ok": True,
+            "task_type": task_type,
+            "message": payload.get("message", ""),
+        }
+
+    if task_type == "agent.echo":
+        return {
+            "ok": True,
+            "task_type": task_type,
+            "payload": payload,
+        }
+
+    raise ValueError(f"unsupported agent task_type: {task_type}")
+
+
+def execute_agent_task(
+    session: Session,
+    *,
+    job_id: str,
+    task_type: str,
+    payload: dict,
+    owner_approved: bool,
+    requested_agent_id: str | None = None,
+) -> dict:
+    if task_type not in SUPPORTED_AGENT_TASK_TYPES:
+        raise ValueError(f"unsupported agent task_type: {task_type}")
+
+    agent, policy = resolve_agent_for_task(
+        session,
+        task_type=task_type,
+        requested_agent_id=requested_agent_id,
+    )
+
+    decision = validate_agent_policy(
+        agent=agent,
+        policy=policy,
+        task_type=task_type,
+        owner_approved=owner_approved,
+    )
+    if not decision.allowed:
+        raise PermissionError(decision.reason)
+
+    now = datetime.now(timezone.utc)
+    run = AgentRun(
+        agent_id=agent.id,
+        job_id=job_id,
+        task_type=task_type,
+        status=AgentRunStatus.running,
+        input_payload=payload or {},
+        started_at=now,
+        updated_at=now,
+    )
+    session.add(run)
+    session.flush()
+
+    start = time.monotonic()
+
+    try:
+        result = _execute_controlled_task(task_type, payload or {})
+        elapsed = time.monotonic() - start
+        if elapsed > policy.max_runtime_seconds:
+            raise TimeoutError("agent run exceeded max_runtime_seconds")
+
+        finished = datetime.now(timezone.utc)
+        run.status = AgentRunStatus.completed
+        run.result = result
+        run.error = None
+        run.finished_at = finished
+        run.updated_at = finished
+        session.add(run)
+        session.flush()
+
+        return {
+            "agent_id": agent.id,
+            "agent_name": agent.name,
+            "agent_run_id": run.id,
+            "task_type": task_type,
+            "status": run.status.value,
+            "result": result,
+        }
+
+    except Exception as exc:
+        finished = datetime.now(timezone.utc)
+        run.status = AgentRunStatus.failed
+        run.error = str(exc)
+        run.finished_at = finished
+        run.updated_at = finished
+        session.add(run)
+        session.flush()
+        raise

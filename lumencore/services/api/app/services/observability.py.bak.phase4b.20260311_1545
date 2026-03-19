@@ -1,0 +1,73 @@
+from __future__ import annotations
+
+from datetime import datetime
+
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
+
+from ..models import AgentRun, AgentRunStatus, Job, JobStatus
+
+
+ALL_STATUSES = [
+    JobStatus.pending,
+    JobStatus.queued,
+    JobStatus.running,
+    JobStatus.completed,
+    JobStatus.failed,
+]
+
+AGENT_RUN_STATUSES = [
+    AgentRunStatus.pending,
+    AgentRunStatus.running,
+    AgentRunStatus.completed,
+    AgentRunStatus.failed,
+]
+
+
+def get_job_status_counts(session: Session) -> tuple[dict[str, int], int]:
+    rows = session.execute(select(Job.status, func.count()).group_by(Job.status)).all()
+
+    counts = {status.value: 0 for status in ALL_STATUSES}
+    for status, count in rows:
+        key = status.value if isinstance(status, JobStatus) else str(status)
+        counts[key] = int(count)
+
+    total = sum(counts.values())
+    return counts, total
+
+
+def get_agent_run_counts(session: Session) -> tuple[dict[str, int], int]:
+    rows = session.execute(select(AgentRun.status, func.count()).group_by(AgentRun.status)).all()
+
+    counts = {status.value: 0 for status in AGENT_RUN_STATUSES}
+    for status, count in rows:
+        key = status.value if isinstance(status, AgentRunStatus) else str(status)
+        counts[key] = int(count)
+
+    total = sum(counts.values())
+    return counts, total
+
+
+def list_recent_jobs(session: Session, limit: int = 10) -> list[Job]:
+    safe_limit = max(1, min(int(limit), 100))
+    stmt = select(Job).order_by(Job.created_at.desc()).limit(safe_limit)
+    return list(session.execute(stmt).scalars())
+
+
+def list_recent_failures(session: Session, limit: int = 10) -> list[Job]:
+    safe_limit = max(1, min(int(limit), 100))
+    stmt = (
+        select(Job)
+        .where(Job.status == JobStatus.failed)
+        .order_by(Job.updated_at.desc())
+        .limit(safe_limit)
+    )
+    return list(session.execute(stmt).scalars())
+
+
+def get_latest_job_activity(session: Session) -> datetime | None:
+    return session.execute(select(func.max(Job.updated_at))).scalar_one_or_none()
+
+
+def get_latest_agent_run_activity(session: Session) -> datetime | None:
+    return session.execute(select(func.max(AgentRun.updated_at))).scalar_one_or_none()

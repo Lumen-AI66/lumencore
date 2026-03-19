@@ -1,0 +1,111 @@
+services:
+  lumencore-api:
+    build:
+      context: /opt/lumencore/services/api
+      dockerfile: Dockerfile
+    image: lumencore-api:phase2
+    container_name: lumencore-api
+    restart: unless-stopped
+    user: "10001:10001"
+    env_file:
+      - /opt/lumencore/.env
+    environment:
+      APP_ENV: production
+      API_PORT: 8000
+      POSTGRES_HOST: lumencore-postgres
+      POSTGRES_PORT: 5432
+      REDIS_HOST: lumencore-redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      CELERY_BROKER_DB: 0
+      CELERY_RESULT_DB: 1
+      LUMENCORE_SYSTEM_PHASE: ${LUMENCORE_SYSTEM_PHASE:-27}
+      LUMENCORE_RELEASE_ID: ${LUMENCORE_RELEASE_ID:-unset}
+      LUMENCORE_RELEASE_MANIFEST_SHA256: ${LUMENCORE_RELEASE_MANIFEST_SHA256:-unset}
+    expose:
+      - "8000"
+    networks:
+      - lumencore-internal
+      - lumencore-public
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).read()"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  lumencore-worker:
+    build:
+      context: /opt/lumencore/services/api
+      dockerfile: Dockerfile
+    image: lumencore-api:phase2
+    container_name: lumencore-worker
+    restart: unless-stopped
+    user: "10001:10001"
+    command: ["sh", "-c", "exec celery -A app.worker_tasks worker --loglevel=INFO --pool=${CELERY_POOL:-solo} --concurrency=${CELERY_CONCURRENCY:-2}"]
+    env_file:
+      - /opt/lumencore/.env
+    environment:
+      APP_ENV: production
+      POSTGRES_HOST: lumencore-postgres
+      POSTGRES_PORT: 5432
+      REDIS_HOST: lumencore-redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      CELERY_BROKER_DB: 0
+      CELERY_RESULT_DB: 1
+      CELERY_POOL: ${CELERY_POOL:-solo}
+      CELERY_CONCURRENCY: ${CELERY_CONCURRENCY:-2}
+      LUMENCORE_SYSTEM_PHASE: ${LUMENCORE_SYSTEM_PHASE:-27}
+      LUMENCORE_RELEASE_ID: ${LUMENCORE_RELEASE_ID:-unset}
+      LUMENCORE_RELEASE_MANIFEST_SHA256: ${LUMENCORE_RELEASE_MANIFEST_SHA256:-unset}
+    networks:
+      - lumencore-internal
+      - lumencore-public
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.worker_tasks inspect ping -d celery@$$HOSTNAME | grep -q pong"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 25s
+
+  lumencore-scheduler:
+    build:
+      context: /opt/lumencore/services/api
+      dockerfile: Dockerfile
+    image: lumencore-api:phase2
+    container_name: lumencore-scheduler
+    restart: unless-stopped
+    user: "10001:10001"
+    command: ["celery", "-A", "app.worker_tasks", "beat", "--loglevel=INFO"]
+    env_file:
+      - /opt/lumencore/.env
+    environment:
+      APP_ENV: production
+      POSTGRES_HOST: lumencore-postgres
+      POSTGRES_PORT: 5432
+      REDIS_HOST: lumencore-redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      CELERY_BROKER_DB: 0
+      CELERY_RESULT_DB: 1
+      LUMENCORE_SYSTEM_PHASE: ${LUMENCORE_SYSTEM_PHASE:-27}
+      LUMENCORE_RELEASE_ID: ${LUMENCORE_RELEASE_ID:-unset}
+      LUMENCORE_RELEASE_MANIFEST_SHA256: ${LUMENCORE_RELEASE_MANIFEST_SHA256:-unset}
+    networks:
+      - lumencore-internal
+      - lumencore-public
+    healthcheck:
+      test: ["CMD", "python", "-c", "import pathlib,sys; cmd=pathlib.Path('/proc/1/cmdline').read_bytes().decode('utf-8','ignore'); sys.exit(0 if ('celery' in cmd and 'beat' in cmd) else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 25s
+
+networks:
+  lumencore-internal:
+    external: true
+    name: lumencore_lumencore-internal
+  lumencore-public:
+    external: true
+    name: lumencore_lumencore-public

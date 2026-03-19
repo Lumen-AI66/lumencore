@@ -1,0 +1,31 @@
+from __future__ import annotations
+
+from datetime import datetime
+from typing import Any
+
+from pydantic import BaseModel, Field
+
+
+class CommandRunRequest(BaseModel):
+    command_text: str = Field(min_length=1, max_length=500)
+    tenant_id: str = "owner"
+
+
+class CommandRunResponse(BaseModel):
+    id: str
+    tenant_id: str
+    command_text: str
+    normalized_command: str
+    intent: str
+    planned_task_type: str | None = None
+    selected_agent_id: str | None = None
+    status: str
+    job_id: str | None = None
+    result_summary: dict[str, Any] | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class CommandHistoryResponse(BaseModel):
+    limit: int
+    items: list[CommandRunResponse]

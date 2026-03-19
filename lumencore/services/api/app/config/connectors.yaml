@@ -1,0 +1,7 @@
+CONNECTOR_ENABLEMENT:
+  git: false
+  search: true
+AGENT_CONNECTOR_PERMISSIONS:
+  command-system:
+    search:
+      - web_search

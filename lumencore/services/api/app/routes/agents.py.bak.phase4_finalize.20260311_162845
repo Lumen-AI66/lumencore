@@ -1,0 +1,111 @@
+from __future__ import annotations
+
+from datetime import datetime, timezone
+
+from fastapi import APIRouter, Header, HTTPException, status
+
+from ..db import session_scope
+from ..policy_engine.policy_engine import PolicyEngine
+from ..schemas.agents import (
+    AgentListResponse,
+    AgentPoliciesResponse,
+    AgentPolicyItem,
+    AgentRunRequest,
+    AgentRunResponse,
+    AgentStatusResponse,
+)
+from ..services.agents import get_agent_status_summary, list_agents, list_policies
+from ..services.jobs import create_job, get_job, mark_job_queued
+from ..worker_tasks import execute_job
+
+router = APIRouter(prefix="/api/agents", tags=["agents"])
+policy_engine = PolicyEngine()
+
+
+@router.get("", response_model=AgentListResponse)
+def agents_root_list() -> AgentListResponse:
+    with session_scope() as session:
+        items = list_agents(session)
+    return AgentListResponse(total=len(items), items=items)
+
+
+@router.get("/list", response_model=AgentListResponse)
+def agents_list() -> AgentListResponse:
+    return agents_root_list()
+
+
+@router.get("/status", response_model=AgentStatusResponse)
+def agents_status() -> AgentStatusResponse:
+    with session_scope() as session:
+        summary = get_agent_status_summary(session)
+    return AgentStatusResponse(**summary)
+
+
+@router.get("/policies", response_model=AgentPoliciesResponse)
+def agents_policies() -> AgentPoliciesResponse:
+    with session_scope() as session:
+        rows = list_policies(session)
+    return AgentPoliciesResponse(total=len(rows), items=[AgentPolicyItem(**row) for row in rows])
+
+
+@router.post("/run", response_model=AgentRunResponse, status_code=status.HTTP_202_ACCEPTED)
+def agents_run(
+    req: AgentRunRequest,
+    x_lumencore_owner_approval: str | None = Header(default=None),
+) -> AgentRunResponse:
+    owner_approved = (x_lumencore_owner_approval or "").strip().lower() == "true"
+
+    tenant_id = (req.tenant_id or "owner").strip() or "owner"
+    if tenant_id != "owner":
+        raise HTTPException(status_code=403, detail="only owner tenant is enabled in current phase")
+
+    payload = {
+        "task_type": req.task_type,
+        "payload": req.payload,
+        "owner_approved": owner_approved,
+        "agent_id": req.agent_id,
+        "tenant_id": tenant_id,
+        "requested_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    try:
+        denial_reason: str | None = None
+
+        with session_scope() as session:
+            validation = policy_engine.validate_agent_request(
+                session,
+                tenant_id=tenant_id,
+                task_type=req.task_type,
+                requested_agent_id=req.agent_id,
+                owner_approved=owner_approved,
+                estimated_cost=req.estimated_cost,
+            )
+            if not validation.allowed:
+                denial_reason = validation.reason
+                job_id = None
+                created_at = None
+            else:
+                job = create_job(session, "agent_task", payload, tenant_id=tenant_id)
+                job_id = job.id
+                created_at = job.created_at
+
+        if denial_reason:
+            raise HTTPException(status_code=403, detail=denial_reason)
+
+        task = execute_job.delay(job_id)
+
+        with session_scope() as session:
+            job = get_job(session, job_id)
+            if not job:
+                raise HTTPException(status_code=500, detail="agent run job disappeared after creation")
+            job = mark_job_queued(session, job, task.id)
+
+            return AgentRunResponse(
+                id=job.id,
+                job_type=job.job_type,
+                status=job.status.value,
+                queue_task_id=job.queue_task_id,
+                created_at=created_at,
+            )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc

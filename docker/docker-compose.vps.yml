@@ -1,0 +1,148 @@
+version: "3.9"
+
+name: lumencore-vps
+
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: lumencore-nginx
+    depends_on:
+      lumencore-dashboard:
+        condition: service_healthy
+      lumencore-api:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ../vps/nginx/lumencore.conf:/etc/nginx/conf.d/default.conf:ro
+      - nginx_logs:/var/log/nginx
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1/healthz || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - edge_net
+      - app_net
+
+  lumencore-dashboard:
+    image: ${LUMENCORE_DASHBOARD_IMAGE:-ghcr.io/example/lumencore-dashboard}:${LUMENCORE_VERSION:-latest}
+    container_name: lumencore-dashboard
+    env_file:
+      - ../vps/deploy/.env.vps
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - API_BASE_URL=${API_BASE_URL:-http://lumencore-api:8080}
+    expose:
+      - "3000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:3000/health || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - app_net
+
+  lumencore-api:
+    image: ${LUMENCORE_API_IMAGE:-ghcr.io/example/lumencore-api}:${LUMENCORE_VERSION:-latest}
+    container_name: lumencore-api
+    env_file:
+      - ../vps/deploy/.env.vps
+    environment:
+      - NODE_ENV=production
+      - PORT=8080
+      - DATABASE_URL=${DATABASE_URL:-postgres://lumencore:change_me@postgres:5432/lumencore}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - CLAUDE_GATEWAY_BASE_URL=${CLAUDE_GATEWAY_BASE_URL:-http://claude-gateway:8090}
+    expose:
+      - "8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:8080/health || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - app_net
+
+  claude-gateway:
+    image: ${LUMENCORE_CLAUDE_GATEWAY_IMAGE:-ghcr.io/example/lumencore-claude-gateway}:${LUMENCORE_VERSION:-latest}
+    container_name: claude-gateway
+    profiles: ["ai"]
+    env_file:
+      - ../vps/deploy/.env.vps
+    environment:
+      - NODE_ENV=production
+      - PORT=8090
+      - AI_GATEWAY_POLICY_VERSION=${AI_GATEWAY_POLICY_VERSION:-v1}
+      - CLAUDE_MODEL_ALLOWLIST=${CLAUDE_MODEL_ALLOWLIST:-claude-sonnet-4}
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY:-change_me}
+    expose:
+      - "8090"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:8090/health || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - app_net
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: lumencore-postgres
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-lumencore}
+      - POSTGRES_USER=${POSTGRES_USER:-lumencore}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-change_me}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lumencore} -d ${POSTGRES_DB:-lumencore}"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - app_net
+
+  redis:
+    image: redis:7-alpine
+    container_name: lumencore-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - app_net
+
+networks:
+  edge_net:
+    driver: bridge
+  app_net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  nginx_logs:

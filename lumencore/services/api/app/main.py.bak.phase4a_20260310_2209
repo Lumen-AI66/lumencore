@@ -1,0 +1,19 @@
+from fastapi import FastAPI
+
+from .db import init_db
+from .routes.health import router as health_router
+from .routes.jobs import router as jobs_router
+from .routes.system import router as system_router
+
+
+app = FastAPI(title="Lumencore API", version="3.0.0")
+
+
+@app.on_event("startup")
+def on_startup() -> None:
+    init_db()
+
+
+app.include_router(health_router)
+app.include_router(system_router)
+app.include_router(jobs_router)

@@ -1,0 +1,12 @@
+from __future__ import annotations
+
+
+def check_budget(*, estimated_cost: float, future_budget_limit: float | None = None) -> tuple[bool, str]:
+    safe_cost = float(estimated_cost)
+    if safe_cost < 0:
+        return False, "estimated_cost cannot be negative"
+    if future_budget_limit is None:
+        return True, "budget guard pass (no configured limit)"
+    if safe_cost > float(future_budget_limit):
+        return False, "estimated_cost exceeds future_budget_limit"
+    return True, "budget guard pass"

@@ -1,0 +1,12 @@
+NODES:
+  control-plane.local:
+    name: lumencore-control-plane
+    kind: control_plane
+    source: builtin
+    enabled: true
+    local: true
+    capabilities:
+      - control_plane
+      - api
+      - worker
+      - scheduler

@@ -1,0 +1,62 @@
+from __future__ import annotations
+
+from fastapi import APIRouter, HTTPException, status
+
+from ..db import session_scope
+from ..schemas.jobs import JobCreateRequest, JobCreateResponse, JobResponse
+from ..services.jobs import create_job, get_job, mark_job_queued
+from ..worker_tasks import execute_job
+
+router = APIRouter(prefix="/api/jobs", tags=["jobs"])
+
+
+@router.post("", response_model=JobCreateResponse, status_code=status.HTTP_202_ACCEPTED)
+def submit_job(req: JobCreateRequest) -> JobCreateResponse:
+    try:
+        # First transaction: persist pending job.
+        with session_scope() as session:
+            job = create_job(session, req.job_type, req.payload)
+            job_id = job.id
+            created_at = job.created_at
+
+        # Dispatch after pending state is committed.
+        task = execute_job.delay(job_id)
+
+        # Second transaction: mark queued, unless worker already progressed status.
+        with session_scope() as session:
+            job = get_job(session, job_id)
+            if not job:
+                raise HTTPException(status_code=500, detail="job disappeared after creation")
+            job = mark_job_queued(session, job, task.id)
+
+            return JobCreateResponse(
+                id=job.id,
+                job_type=job.job_type,
+                status=job.status,
+                created_at=created_at,
+                queue_task_id=job.queue_task_id,
+            )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/{job_id}", response_model=JobResponse)
+def fetch_job(job_id: str) -> JobResponse:
+    with session_scope() as session:
+        job = get_job(session, job_id)
+        if not job:
+            raise HTTPException(status_code=404, detail="job not found")
+
+        return JobResponse(
+            id=job.id,
+            job_type=job.job_type,
+            status=job.status,
+            payload=job.payload,
+            result=job.result,
+            error=job.error,
+            queue_task_id=job.queue_task_id,
+            created_at=job.created_at,
+            started_at=job.started_at,
+            finished_at=job.finished_at,
+            updated_at=job.updated_at,
+        )

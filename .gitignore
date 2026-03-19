@@ -1,0 +1,18 @@
+.env
+.env.*
+__pycache__/
+*.pyc
+*.log
+node_modules/
+
+# temp / artifacts
+*.tar.gz
+_backup_*
+_vps_recovery_*
+_connectors_backup_*
+phase*.json
+phase*.py
+
+# editor
+.vscode/
+.sync*

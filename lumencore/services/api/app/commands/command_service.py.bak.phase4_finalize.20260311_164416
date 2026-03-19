@@ -1,0 +1,85 @@
+from __future__ import annotations
+
+from datetime import datetime, timezone
+import uuid
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from ..models import CommandRun, Job, JobStatus
+from ..services.agents import get_agent_status_summary
+from ..services.observability import get_job_status_counts
+from .agent_selector import select_agent_for_task
+from .intent_parser import parse_command
+from .task_planner import plan_from_intent
+
+
+def create_command_run(session: Session, *, tenant_id: str, command_text: str, normalized_command: str, intent: str, planned_task_type: str | None, selected_agent_id: str | None, status: str, job_id: str | None = None, result_summary: dict | None = None) -> CommandRun:
+    run = CommandRun(
+        id=str(uuid.uuid4()),
+        tenant_id=tenant_id,
+        command_text=command_text,
+        normalized_command=normalized_command,
+        intent=intent,
+        planned_task_type=planned_task_type,
+        selected_agent_id=selected_agent_id,
+        status=status,
+        job_id=job_id,
+        result_summary=result_summary,
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc),
+    )
+    session.add(run)
+    session.flush()
+    return run
+
+
+def update_command_run_for_job(session: Session, run: CommandRun) -> CommandRun:
+    if not run.job_id:
+        return run
+    job = session.get(Job, run.job_id)
+    if not job:
+        return run
+    run.status = str(job.status.value if isinstance(job.status, JobStatus) else job.status)
+    run.updated_at = datetime.now(timezone.utc)
+    if job.status == JobStatus.completed and run.result_summary is None:
+        run.result_summary = {"job_status": run.status}
+    if job.status == JobStatus.failed:
+        run.result_summary = {"job_status": run.status, "error": job.error}
+    session.add(run)
+    session.flush()
+    return run
+
+
+def build_read_only_result(session: Session, intent: str) -> dict:
+    if intent == "system.status":
+        return {"status": "ok", "service": "lumencore-api", "generated_at": datetime.now(timezone.utc).isoformat()}
+    if intent == "jobs.summary":
+        counts, total = get_job_status_counts(session)
+        return {"counts_by_status": counts, "total_jobs": total}
+    if intent == "agents.status":
+        return get_agent_status_summary(session)
+    raise ValueError(f"unsupported read-only intent: {intent}")
+
+
+def interpret_command(command_text: str) -> dict:
+    parsed = parse_command(command_text)
+    plan = plan_from_intent(parsed)
+    return {"parsed": parsed, "plan": plan}
+
+
+def select_agent_if_needed(session: Session, plan: dict, requested_agent_id: str | None = None) -> str | None:
+    if plan["execution_mode"] != "agent_job":
+        return None
+    if requested_agent_id:
+        return requested_agent_id
+    return select_agent_for_task(session, plan["task_type"])
+
+
+def get_command_run(session: Session, command_id: str) -> CommandRun | None:
+    return session.get(CommandRun, command_id)
+
+
+def list_command_runs(session: Session, limit: int = 20) -> list[CommandRun]:
+    safe = max(1, min(int(limit), 100))
+    return list(session.execute(select(CommandRun).order_by(CommandRun.created_at.desc()).limit(safe)).scalars())

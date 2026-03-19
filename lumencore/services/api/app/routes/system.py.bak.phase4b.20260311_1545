@@ -1,0 +1,158 @@
+from __future__ import annotations
+
+from datetime import datetime, timezone
+import socket
+
+from fastapi import APIRouter, Depends
+from redis import Redis
+from redis.exceptions import RedisError
+
+from ..config import settings
+from ..db import check_db, session_scope
+from ..security import internal_observability_boundary
+from ..services.observability import (
+    get_agent_run_counts,
+    get_job_status_counts,
+    get_latest_agent_run_activity,
+    get_latest_job_activity,
+)
+from ..worker_tasks import celery_app
+
+router = APIRouter(prefix="/api/system", tags=["system"])
+
+SCHEDULER_HEARTBEAT_KEY = "lumencore:scheduler:heartbeat"
+SCHEDULER_HEARTBEAT_MAX_AGE_SECONDS = 120
+
+
+def check_redis() -> dict:
+    try:
+        client = Redis(
+            host=settings.redis_host,
+            port=settings.redis_port,
+            password=settings.redis_password or None,
+            db=settings.celery_broker_db,
+            socket_connect_timeout=2,
+            socket_timeout=2,
+            decode_responses=True,
+        )
+        pong = client.ping()
+        return {"ok": bool(pong), "message": "redis reachable" if pong else "redis ping failed"}
+    except RedisError as exc:
+        return {"ok": False, "message": str(exc)}
+
+
+def check_worker() -> dict:
+    try:
+        inspector = celery_app.control.inspect(timeout=2)
+        pong = inspector.ping() if inspector else None
+        ok = bool(pong)
+        return {
+            "ok": ok,
+            "message": "worker reachable" if ok else "no worker ping response",
+        }
+    except Exception as exc:
+        return {"ok": False, "message": str(exc)}
+
+
+def check_scheduler() -> dict:
+    try:
+        client = Redis(
+            host=settings.redis_host,
+            port=settings.redis_port,
+            password=settings.redis_password or None,
+            db=settings.celery_broker_db,
+            socket_connect_timeout=2,
+            socket_timeout=2,
+            decode_responses=True,
+        )
+        raw = client.get(SCHEDULER_HEARTBEAT_KEY)
+        if not raw:
+            return {"ok": False, "message": "scheduler heartbeat missing"}
+
+        heartbeat_at = datetime.fromisoformat(raw)
+        if heartbeat_at.tzinfo is None:
+            heartbeat_at = heartbeat_at.replace(tzinfo=timezone.utc)
+
+        age_seconds = (datetime.now(timezone.utc) - heartbeat_at).total_seconds()
+        ok = age_seconds <= SCHEDULER_HEARTBEAT_MAX_AGE_SECONDS
+
+        return {
+            "ok": ok,
+            "message": (
+                f"scheduler heartbeat age {age_seconds:.1f}s"
+                if ok
+                else f"scheduler heartbeat stale {age_seconds:.1f}s"
+            ),
+            "last_heartbeat_at": heartbeat_at.isoformat(),
+        }
+    except Exception as exc:
+        return {"ok": False, "message": str(exc)}
+
+
+@router.get("/health")
+def system_health() -> dict:
+    db_status = check_db()
+    redis_status = check_redis()
+    overall_ok = db_status["ok"] and redis_status["ok"]
+
+    return {
+        "status": "ok" if overall_ok else "degraded",
+        "service": "lumencore-api",
+        "phase": 2,
+        "components": {
+            "database": db_status,
+            "redis": redis_status,
+        },
+    }
+
+
+@router.get("/info")
+def system_info() -> dict:
+    return {
+        "service": "lumencore-api",
+        "phase": 2,
+        "environment": settings.app_env,
+        "hostname": socket.gethostname(),
+        "api_port": settings.api_port,
+    }
+
+
+@router.get(
+    "/execution-summary",
+    dependencies=[Depends(internal_observability_boundary)],
+)
+def execution_summary() -> dict:
+    db_status = check_db()
+    redis_status = check_redis()
+    worker_status = check_worker()
+    scheduler_status = check_scheduler()
+
+    with session_scope() as session:
+        job_counts, total_jobs = get_job_status_counts(session)
+        latest_job_activity = get_latest_job_activity(session)
+        agent_run_counts, total_agent_runs = get_agent_run_counts(session)
+        latest_agent_run_activity = get_latest_agent_run_activity(session)
+
+    api_ok = db_status["ok"] and redis_status["ok"]
+
+    return {
+        "status": "ok" if (api_ok and worker_status["ok"] and scheduler_status["ok"]) else "degraded",
+        "service": "lumencore-api",
+        "phase": "3C",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "health": {
+            "api": {"ok": api_ok, "database": db_status, "redis": redis_status},
+            "worker": worker_status,
+            "scheduler": scheduler_status,
+        },
+        "jobs": {
+            "counts_by_status": job_counts,
+            "total_jobs": total_jobs,
+            "latest_job_activity": latest_job_activity.isoformat() if latest_job_activity else None,
+        },
+        "agents": {
+            "run_counts_by_status": agent_run_counts,
+            "total_runs": total_agent_runs,
+            "latest_agent_activity": latest_agent_run_activity.isoformat() if latest_agent_run_activity else None,
+        },
+    }

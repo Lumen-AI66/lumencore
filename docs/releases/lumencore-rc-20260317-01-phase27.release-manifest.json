@@ -1,0 +1,1528 @@
+{
+  "deploy_target": {
+    "api_app_root": "/opt/lumencore/services/api/app",
+    "api_source_root": "/opt/lumencore/services/api",
+    "compose_file": "/opt/lumencore/docker-compose.phase2.yml",
+    "env_file": "/opt/lumencore/.env",
+    "root": "/opt/lumencore"
+  },
+  "generated_at": "2026-03-17T07:18:24.026977+00:00",
+  "health_contract": {
+    "api": [
+      "/api/system/health",
+      "/api/system/execution-summary",
+      "/api/operator/summary"
+    ],
+    "public": [
+      "/health"
+    ],
+    "required_status": {
+      "/api/system/health": "ok",
+      "/health": "ok"
+    }
+  },
+  "lumencore_root": "C:\\LUMENCORE_SYSTEM\\lumencore",
+  "manifest_sha256": "ae9324a89c6c52ae7adb896a704fc76809525b69522676daa2383de530717947",
+  "release_files": [
+    {
+      "path": "docs/CONTROLLED_LAUNCH_CHECKLIST.md",
+      "sha256": "c228b20f17c21fe8502d5d720566e5d3dc785286afb9b61b9d59357857034af6",
+      "size_bytes": 2288
+    },
+    {
+      "path": "docs/DECISIONS.md",
+      "sha256": "c51be2ce966fb80b467fa224b1a14b414a27bb7eea194dbd91effff641910d7f",
+      "size_bytes": 28799
+    },
+    {
+      "path": "docs/IMPLEMENTATION_STATUS.md",
+      "sha256": "51000611cc94fdaeb1ad73eec91720d9efc2d41b947605052a66c90142536499",
+      "size_bytes": 48525
+    },
+    {
+      "path": "docs/RELEASE_MANIFEST.md",
+      "sha256": "491e8b7675b341143b5bc9d4611713983671ccb963598b55c39634f370b9bad5",
+      "size_bytes": 1752
+    },
+    {
+      "path": "lumencore/.env.example",
+      "sha256": "323caa9f5c70baa4f3a639ac8f83ac0e517fb44e161559a653ff7a91e71c02a5",
+      "size_bytes": 361
+    },
+    {
+      "path": "lumencore/deploy/RELEASE_OPS.md",
+      "sha256": "b3607587ddaafcab777e2d3d15b63d4b33616a9c5ebd506f1badc276e421ba3c",
+      "size_bytes": 1643
+    },
+    {
+      "path": "lumencore/docker-compose.phase2.yml",
+      "sha256": "d512bffbb2531cccbb6e07b5e10c13aac6b03898febc8434e0e2381f6c9ccadd",
+      "size_bytes": 3651
+    },
+    {
+      "path": "lumencore/services/api/Dockerfile",
+      "sha256": "90818404f8cf73bda27600f4e0c5da82c87dcbc1fe791d5cf9486a2c5354c24c",
+      "size_bytes": 553
+    },
+    {
+      "path": "lumencore/services/api/app/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "lumencore/services/api/app/__pycache__/__init__.cpython-313.pyc",
+      "sha256": "573867556e2944bc016bb8315606ac8ec3036af5209a6e334f084e9c663ccf24",
+      "size_bytes": 155
+    },
+    {
+      "path": "lumencore/services/api/app/__pycache__/config.cpython-313.pyc",
+      "sha256": "e50e4e433c7cf0e0992c08f6c603c6e0bef720aa911399b5705f9d0b76ea4cb4",
+      "size_bytes": 4222
+    },
+    {
+      "path": "lumencore/services/api/app/__pycache__/db.cpython-313.pyc",
+      "sha256": "da262727616174875cf948fbce06315a28021f19be2dc7e728322b2b76758fc3",
+      "size_bytes": 16456
+    },
+    {
+      "path": "lumencore/services/api/app/__pycache__/main.cpython-313.pyc",
+      "sha256": "948830e79301cfd56a0551db805a00f9441d60da59510aeb41aa81779435ded7",
+      "size_bytes": 2425
+    },
+    {
+      "path": "lumencore/services/api/app/__pycache__/models.cpython-313.pyc",
+      "sha256": "fdeb309d982c50538770be2501a142e4b032b4d495014d6a2ff2d9f4c2676688",
+      "size_bytes": 31878
+    },
+    {
+      "path": "lumencore/services/api/app/__pycache__/worker_tasks.cpython-313.pyc",
+      "sha256": "7b240e4f8a8b5cb7bdaefc58db57ee583957ee2ba924e6e5003b5c9cd3648b20",
+      "size_bytes": 12720
+    },
+    {
+      "path": "lumencore/services/api/app/agents/__init__.py",
+      "sha256": "77bd96b4e1737bc8032738ae7a6e82eff656d9d11d2b9df81d4794fdaa9d467d",
+      "size_bytes": 974
+    },
+    {
+      "path": "lumencore/services/api/app/agents/__pycache__/__init__.cpython-313.pyc",
+      "sha256": "4fc0f2e00457166db475f9a97d20d5096115236c7be4629cc479b53d3c8390d0",
+      "size_bytes": 1017
+    },
+    {
+      "path": "lumencore/services/api/app/agents/__pycache__/agent_loop.cpython-313.pyc",
+      "sha256": "6f4127c693c4b01f9c45ee61c9e6de6edc33c4021d440f07e9c232d849a62862",
+      "size_bytes": 3343
+    },
+    {
+      "path": "lumencore/services/api/app/agents/__pycache__/agent_policy.cpython-313.pyc",
+      "sha256": "be2da028f2b1196d369d23702f0ac001876d1788fac027199050945a36142043",
+      "size_bytes": 1835
+    },
+    {
+      "path": "lumencore/services/api/app/agents/__pycache__/agent_registry.cpython-313.pyc",
+      "sha256": "74b7c0b6dc5d38c4718c862b5f55fe9aefa46d1527988965ffb17515c13acca6",
+      "size_bytes": 12423
+    },
+    {
+      "path": "lumencore/services/api/app/agents/__pycache__/agent_router.cpython-313.pyc",
+      "sha256": "7c93848e044369f68caf8d6c9278db3966e0b15469b88ea2954a6e9c98b87425",
+      "size_bytes": 2304
+    },
+    {
+      "path": "lumencore/services/api/app/agents/__pycache__/agent_runtime.cpython-313.pyc",
+      "sha256": "f7238c6aec3340b274eb153f1400daec316ba453d2b40cc5c8bd587a1e3bc35b",
+      "size_bytes": 21314
+    },
+    {
+      "path": "lumencore/services/api/app/agents/__pycache__/agent_types.cpython-313.pyc",
+      "sha256": "7241ed4fdd97df9fbfe60b8527ed82e4ddec643941e7b2907ca0370d4195600b",
+      "size_bytes": 4246
+    },
+    {
+      "path": "lumencore/services/api/app/agents/__pycache__/state_models.cpython-313.pyc",
+      "sha256": "6b3dbdd73c42fcb728a9585136f73d4f96e91085f475cca865f5e9e48e991106",
+      "size_bytes": 4329
+    },
+    {
+      "path": "lumencore/services/api/app/agents/__pycache__/state_store.cpython-313.pyc",
+      "sha256": "37678f24545821d42c028f74c09581335e55593c948ca8d968fd6fe74e91db4f",
+      "size_bytes": 12848
+    },
+    {
+      "path": "lumencore/services/api/app/agents/agent_loop.py",
+      "sha256": "e7ee01a4173db2baea43d2aaee1fbcf6779d8508ab947eda8cdf4091e535e6ea",
+      "size_bytes": 1846
+    },
+    {
+      "path": "lumencore/services/api/app/agents/agent_policy.py",
+      "sha256": "10d87645bd8b11680b62ca7d3a4684b88c488e46d19b2bd31e376fd29954bfb6",
+      "size_bytes": 1056
+    },
+    {
+      "path": "lumencore/services/api/app/agents/agent_registry.py",
+      "sha256": "933e439fcf7c3cc04e635d35698bd06f7cbdde80d9d3d8e243de321dd682574c",
+      "size_bytes": 11663
+    },
+    {
+      "path": "lumencore/services/api/app/agents/agent_router.py",
+      "sha256": "d832eac4319f301c2877a909b8f84e9b1b648480dd7b7cb6385029b2d44f01dc",
+      "size_bytes": 1321
+    },
+    {
+      "path": "lumencore/services/api/app/agents/agent_runtime.py",
+      "sha256": "5ffd3a832a05ca68df8f0ffbc0c5209890ffd342cdc42ca99d5ab98567ae8ac3",
+      "size_bytes": 24239
+    },
+    {
+      "path": "lumencore/services/api/app/agents/agent_runtime.py.bak.phase4a1",
+      "sha256": "f360d7908574f95ad42074c56344d67f808939a9c180d747d05f666d7ae0dc0f",
+      "size_bytes": 2849
+    },
+    {
+      "path": "lumencore/services/api/app/agents/agent_runtime.py.bak.phase4a1.20260310_2241",
+      "sha256": "f360d7908574f95ad42074c56344d67f808939a9c180d747d05f666d7ae0dc0f",
+      "size_bytes": 2849
+    },
+    {
+      "path": "lumencore/services/api/app/agents/agent_types.py",
+      "sha256": "c48f633b5e511c0be9067c85b2061fc16adc801f149848595ec6269cfcac22d9",
+      "size_bytes": 2611
+    },
+    {
+      "path": "lumencore/services/api/app/agents/state_models.py",
+      "sha256": "989e07890f982f3119549461049629bc589241d4d1efb994712450852ec70f19",
+      "size_bytes": 2610
+    },
+    {
+      "path": "lumencore/services/api/app/agents/state_store.py",
+      "sha256": "6119ce6f269de8da547b41f58ff430a743b84ffa24568d49aac67bd40dc99d9b",
+      "size_bytes": 9805
+    },
+    {
+      "path": "lumencore/services/api/app/commands/__init__.py",
+      "sha256": "c7094da2e80327681fcc7ce5106c2459bdc3178ea1ba1cadaee21f1a3257d280",
+      "size_bytes": 61
+    },
+    {
+      "path": "lumencore/services/api/app/commands/__pycache__/__init__.cpython-313.pyc",
+      "sha256": "0aee87ebead8423ef8f1b50d1c192954051847cd94bd65719f195f7e4beb8d87",
+      "size_bytes": 233
+    },
+    {
+      "path": "lumencore/services/api/app/commands/__pycache__/agent_selector.cpython-313.pyc",
+      "sha256": "6095267a834727e821ef6300a0f8655434cd385a66f73949cd9a1ca5223c00bd",
+      "size_bytes": 1709
+    },
+    {
+      "path": "lumencore/services/api/app/commands/__pycache__/command_service.cpython-313.pyc",
+      "sha256": "42e0e9f8fc0b515c69504bcad81045b997bc857773420b8832d2bbc3518ffd3b",
+      "size_bytes": 27187
+    },
+    {
+      "path": "lumencore/services/api/app/commands/__pycache__/intent_parser.cpython-313.pyc",
+      "sha256": "ecfbe57a81e873cd1eabfd8300156a63c202e957cda257b0153677bdfae6cdb8",
+      "size_bytes": 3283
+    },
+    {
+      "path": "lumencore/services/api/app/commands/__pycache__/task_planner.cpython-313.pyc",
+      "sha256": "2001bea3c48dfacb5eb6ee67b07904e350caf46d84849a1e1501976fbf8598d2",
+      "size_bytes": 2328
+    },
+    {
+      "path": "lumencore/services/api/app/commands/agent_selector.py",
+      "sha256": "e1fafb57c3b194bd05758928c252d839004e3128676ad528b844a0fb5b24fb63",
+      "size_bytes": 792
+    },
+    {
+      "path": "lumencore/services/api/app/commands/command_service.py",
+      "sha256": "f44d45a86f1920cd69ea84cf062cebdb483c0c937432bb3086bb75b4cf4fa375",
+      "size_bytes": 24121
+    },
+    {
+      "path": "lumencore/services/api/app/commands/command_service.py.bak.phase4_finalize.20260311_164416",
+      "sha256": "fdab569614a1d29526b0ac654684e580dd4f4bd22643225cc1034a03df72d73c",
+      "size_bytes": 3232
+    },
+    {
+      "path": "lumencore/services/api/app/commands/intent_parser.py",
+      "sha256": "10b082adc417c735d8141519d283ef89afcfeeaf44ff24711e68ddc4f99df577",
+      "size_bytes": 3480
+    },
+    {
+      "path": "lumencore/services/api/app/commands/task_planner.py",
+      "sha256": "ef70fe4d33430c44ac5f239529f5d7c99b94ad8aa1a27ea82293ad4bae51ada1",
+      "size_bytes": 3831
+    },
+    {
+      "path": "lumencore/services/api/app/config.py",
+      "sha256": "d569fc4c760327913e171056cdb0affd4ce96aededa611d5dd80694e6c7af663",
+      "size_bytes": 2260
+    },
+    {
+      "path": "lumencore/services/api/app/config/connectors.yaml",
+      "sha256": "971bd092a5543c2879497fec9edb52ffb57d5926117dffc63a0274c57eeef367",
+      "size_bytes": 135
+    },
+    {
+      "path": "lumencore/services/api/app/config/nodes.yaml",
+      "sha256": "6e07d8279d8fd5743b72191b15e1cfd323ee9117cc2e0e91dde6864b04a70f36",
+      "size_bytes": 239
+    },
+    {
+      "path": "lumencore/services/api/app/config/tools.yaml",
+      "sha256": "29a5c1d9b52e662e578ffdba3bd30930f32ec55872065d856c2be579fe7c2fdf",
+      "size_bytes": 363
+    },
+    {
+      "path": "lumencore/services/api/app/connectors/__init__.py",
+      "sha256": "a7995c35a7733ee4388b33700310b8c6b3977201caaab820469007e35adf02d6",
+      "size_bytes": 179
+    },
+    {
+      "path": "lumencore/services/api/app/connectors/__pycache__/__init__.cpython-313.pyc",
+      "sha256": "94f25f187bff5a71cb586a0542ce7721fcb806cf35f0600ce25ccc88d516addb",
+      "size_bytes": 334
+    },
+    {
+      "path": "lumencore/services/api/app/connectors/__pycache__/connector_service.cpython-313.pyc",
+      "sha256": "885888c8eb3f0adb86bb901aec16108d063036c469b73264cf3883a62a058600",
+      "size_bytes": 8836
+    },
+    {
+      "path": "lumencore/services/api/app/connectors/__pycache__/secrets.cpython-313.pyc",
+      "sha256": "1168754aa636c8aee152f21f76e4491a49bb2d3c68675a0abc7f6cf2aa429d11",
+      "size_bytes": 4064
+    },
+    {
+      "path": "lumencore/services/api/app/connectors/__pycache__/smoke_phase5.cpython-313.pyc",
+      "sha256": "cb1e3602c3def3b526d29b8108194ccff1f5302d17ca04fa8efd21e36cc9565e",
+      "size_bytes": 3386
+    },
+    {
+      "path": "lumencore/services/api/app/connectors/__pycache__/smoke_phase6.cpython-313.pyc",
+      "sha256": "476878a04979a92edb914892a8ee3f0d8dff1a12d5684a6fc0ea8d71ebfcd913",
+      "size_bytes": 8578
+    },
+    {
+      "path": "lumencore/services/api/app/connectors/__pycache__/startup.cpython-313.pyc",
+      "sha256": "1b887e996168935cdf237ce5ba585ad472dbebbe03ada4585f74bc508e2d0630",
+      "size_bytes": 903
+    },
+    {
+      "path": "lumencore/services/api/app/connectors/audit/__init__.py",
+      "sha256": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
+      "size_bytes": 2
+    },
+    {
+      "path": "lumencore/services/api/app/connectors/audit/__pycache__/__init__.cpython-313.pyc",
+      "sha256": "738f16884fce57324f13ee865164d16894932be9ba8d82434951646e21f50f0e",
+      "size_bytes": 172
+    },
+    {
+      "path": "lumencore/services/api/app/connectors/audit/__pycache__/connector_audit.cpython-313.pyc",
+      "sha256": "b1eb808522ed6871e569c412ad214556a98a6da387e7590621b3444390c094e6",
+      "size_bytes": 9741
+    },
+    {
+      "path": "lumencore/services/api/app/connectors/audit/connector_audit.py",
+      "sha256": "99913fd17562521acb13f52993b6c4ac6cf9f19512b00ec3d350b07d176c56b3",
+      "size_bytes": 9086
+    },
+    {
+      "path": "lumencore/services/api/app/connectors/base/__init__.py",
+      "sha256": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
+      "size_bytes": 2
+    },
+    {
+      "path": "lumencore/services/api/app/connectors/base/__pycache__/__init__.cpython-313.pyc",
+      "sha256": "5d899cb12cdc9753b9ce82550faf2f72a61301457423b1fb90892857d24b5151",
+      "size_bytes": 171
+    },
+    {
+      "path": "lumencore/services/api/app/connectors/base/__pycache__/connector.cpython-313.pyc",
+      "sha256": "9ea7ab649b5eeeb1d12e93cfbb590a8b2268510a368919fb2a5a597f67eeacf7",
+      "size_bytes": 2781
+    },
+    {
+      "path": "lumencore/services/api/app/connectors/base/__pycache__/registry.cpython-313.pyc",
+      "sha256": "c1fa63bc2639fa8a881c9d4bcc1f9f1466f66666dd4021189e7617d062c984d7",
+      "size_bytes": 3296
+    },
+    {
+      "path": "lumencore/services/api/app/connectors/base/connector.py",
+      "sha256": "606200415515df19eb8fb30beef4a7639d10ce021acd91c6e3e856289e43b699",
+      "size_bytes": 1314
+    },
+    {
+      "path": "lumencore/services/api/app/connectors/base/registry.py",
+      "sha256": "8e9308b7de415cbba95853e73fb195d360407fec20aa3ed05b8041c25dc51ffa",
+      "size_bytes": 1781
+    },
+    {
+      "path": "lumencore/services/api/app/connectors/connector_service.py",
+      "sha256": "58e5a743dfecc2e3311c869482f649f7535ff656f1fca86bb702f0cfa22a234b",
+      "size_bytes": 10037
+    },
+    {
+      "path": "lumencore/services/api/app/connectors/git/__init__.py",
+      "sha256": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
+      "size_bytes": 2
+    },
+    {
+      "path": "lumencore/services/api/app/connectors/git/__pycache__/__init__.cpython-313.pyc",
+      "sha256": "9155f3d4256a6ddd4a3f9e7c8832f4a33f32580fc8c05f52f2c02ace0e63e689",
+      "size_bytes": 170
+    },
+    {
+      "path": "lumencore/services/api/app/connectors/git/__pycache__/git_connector.cpython-313.pyc",
+      "sha256": "cae7a659dea9c95c74371720c7cceb7d775663c79ca25a1ff2ddc7a31c7aba57",
+      "size_bytes": 8119
+    },
+    {
+      "path": "lumencore/services/api/app/connectors/git/git_connector.py",
+      "sha256": "ffadcb3384b091b983750d65369e888038a57bd9d3b6d91c5d50685f1875de02",
+      "size_bytes": 6498
+    },
+    {
+      "path": "lumencore/services/api/app/connectors/policy/__init__.py",
+      "sha256": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
+      "size_bytes": 2
+    },
+    {
+      "path": "lumencore/services/api/app/connectors/policy/__pycache__/__init__.cpython-313.pyc",
+      "sha256": "a515ca832b35e007940712261388a095ac90c83e1b1edce0347e2c960cd46611",
+      "size_bytes": 173
+    },
+    {
+      "path": "lumencore/services/api/app/connectors/policy/__pycache__/agent_connector_permissions.cpython-313.pyc",
+      "sha256": "5f36e679f65e4a5f05f63f968eaf5196e95e73bd0074fe943012dbd267bd0ee8",
+      "size_bytes": 3721
+    },
+    {
+      "path": "lumencore/services/api/app/connectors/policy/__pycache__/connector_policy.cpython-313.pyc",
+      "sha256": "d655a48abb8760c8b0382de28fa40c6439b57f47db56bdb3a7588765fa9ba1d8",
+      "size_bytes": 2948
+    },
+    {
+      "path": "lumencore/services/api/app/connectors/policy/agent_connector_permissions.py",
+      "sha256": "da4055ff7eb6632d279f8291a1954610ce5bc8d457df990b03326297b5aec9b0",
+      "size_bytes": 2581
+    },
+    {
+      "path": "lumencore/services/api/app/connectors/policy/connector_policy.py",
+      "sha256": "1dea9b94635182c5143f0123dedffa0bbf24b5ce4799477fa7ae1b75925b868a",
+      "size_bytes": 2064
+    },
+    {
+      "path": "lumencore/services/api/app/connectors/search/__init__.py",
+      "sha256": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
+      "size_bytes": 2
+    },
+    {
+      "path": "lumencore/services/api/app/connectors/search/__pycache__/__init__.cpython-313.pyc",
+      "sha256": "5f3d0078724ba260e3019fe84f6eb00ad366e10ed9d3f2d990928bc91575a442",
+      "size_bytes": 173
+    },
+    {
+      "path": "lumencore/services/api/app/connectors/search/__pycache__/search_connector.cpython-313.pyc",
+      "sha256": "058be1a8fdb7fb6d50a7e6a99389f9dbfbc67893c3666b4fafafae94e95e8dfb",
+      "size_bytes": 9727
+    },
+    {
+      "path": "lumencore/services/api/app/connectors/search/search_connector.py",
+      "sha256": "cc8cf9ef4d92ea416c2682fa1f86391c407b1e45fe0820030fd2a95c06d99b30",
+      "size_bytes": 7524
+    },
+    {
+      "path": "lumencore/services/api/app/connectors/smoke_phase5.py",
+      "sha256": "92ddbbe10d2279cb54ed374264266f7f56ea01776d1d7c25bdc361e2866fc063",
+      "size_bytes": 2143
+    },
+    {
+      "path": "lumencore/services/api/app/connectors/smoke_phase6.py",
+      "sha256": "05312cbf5f12cde9ac60d043ce70a5a4fe44733dca5b798a2635c63b40133b3e",
+      "size_bytes": 6543
+    },
+    {
+      "path": "lumencore/services/api/app/connectors/startup.py",
+      "sha256": "8e63c9ea055f3b1dec2afd695f91beefe20219f5fc09a971af8b39b36e90b9b6",
+      "size_bytes": 526
+    },
+    {
+      "path": "lumencore/services/api/app/db.py",
+      "sha256": "1ff33ca65380fbc47ccf847b37c217f20bbd8fbcdaa1a367495e19f728520227",
+      "size_bytes": 16226
+    },
+    {
+      "path": "lumencore/services/api/app/db.py.bak.phase4_finalize.20260311_162845",
+      "sha256": "87ff7701f53bd9b0afe2f3d81930712f99f5f07bcfd03f2d4b4f0cbfc9da2d5f",
+      "size_bytes": 3939
+    },
+    {
+      "path": "lumencore/services/api/app/db.py.bak.phase4a1",
+      "sha256": "0fe650d7aeca6cf77a3abc3032b68c3aba21b7a2043fd4bc2a7f59aab5387107",
+      "size_bytes": 1205
+    },
+    {
+      "path": "lumencore/services/api/app/db.py.bak.phase4a1.20260310_2241",
+      "sha256": "0fe650d7aeca6cf77a3abc3032b68c3aba21b7a2043fd4bc2a7f59aab5387107",
+      "size_bytes": 1205
+    },
+    {
+      "path": "lumencore/services/api/app/db.py.bak.phase4a2.20260311_1622",
+      "sha256": "87ff7701f53bd9b0afe2f3d81930712f99f5f07bcfd03f2d4b4f0cbfc9da2d5f",
+      "size_bytes": 3939
+    },
+    {
+      "path": "lumencore/services/api/app/db.py.bak.phase4b.20260311_1545",
+      "sha256": "6782503a05a5ab72569f9040ad4574da85e53e7fa49faf361859ddf53bec4889",
+      "size_bytes": 2842
+    },
+    {
+      "path": "lumencore/services/api/app/execution/__init__.py",
+      "sha256": "794f169f97905fd10d06eb4e966d29282745fd5d08bb72f0af376c5c1aaeb5b4",
+      "size_bytes": 763
+    },
+    {
+      "path": "lumencore/services/api/app/execution/__pycache__/__init__.cpython-313.pyc",
+      "sha256": "4715820a9322dacff86e567e4a4b9266e2b0062d30d1f073eb6b02054e1bae22",
+      "size_bytes": 776
+    },
+    {
+      "path": "lumencore/services/api/app/execution/__pycache__/retry_policy.cpython-313.pyc",
+      "sha256": "1bc10a0694ba3903af55e616044d746e581ed02787dce30e645078832269e370",
+      "size_bytes": 2138
+    },
+    {
+      "path": "lumencore/services/api/app/execution/__pycache__/scheduler.cpython-313.pyc",
+      "sha256": "940a08cdf3d61874a7a9e7914ab7ecfc26e51de3fc9332109468929b29a219fb",
+      "size_bytes": 12292
+    },
+    {
+      "path": "lumencore/services/api/app/execution/__pycache__/task_models.cpython-313.pyc",
+      "sha256": "652a0e5584379a8e4d9db5f88d6d66f6464d38af23d6c7934fc4f60a08f6cde2",
+      "size_bytes": 2823
+    },
+    {
+      "path": "lumencore/services/api/app/execution/__pycache__/task_queue.cpython-313.pyc",
+      "sha256": "0a34fb775330a253eb56412a3848cffc23e4ea0fa2ceb228cadd1ec81470c6bb",
+      "size_bytes": 1740
+    },
+    {
+      "path": "lumencore/services/api/app/execution/__pycache__/task_store.cpython-313.pyc",
+      "sha256": "650066fdd6e5bb9cff30eb6e552b49f0e213bad77bf248b9cb5497e963f900c2",
+      "size_bytes": 11272
+    },
+    {
+      "path": "lumencore/services/api/app/execution/retry_policy.py",
+      "sha256": "824a2d8f252917fe0188cefb67c52fbcf9326b52ed00b2872eff5b5c80d1788e",
+      "size_bytes": 965
+    },
+    {
+      "path": "lumencore/services/api/app/execution/scheduler.py",
+      "sha256": "192c45f5bf75f79ed42a80df9bd29b0dcbedc46a03d946b69e622b288657becd",
+      "size_bytes": 10322
+    },
+    {
+      "path": "lumencore/services/api/app/execution/task_models.py",
+      "sha256": "a37a2770e15b7da451038a799460117bd4ca629719b9fa489a5f549f2a09c66d",
+      "size_bytes": 1521
+    },
+    {
+      "path": "lumencore/services/api/app/execution/task_queue.py",
+      "sha256": "452a6dba655c148d86a9fa283252267906ee46d0263e24b4f646da764a880f67",
+      "size_bytes": 777
+    },
+    {
+      "path": "lumencore/services/api/app/execution/task_store.py",
+      "sha256": "8478ae6b100b44e130fc94f6bb46b0824724c6eaebad544d194101e97e4ab6f2",
+      "size_bytes": 7157
+    },
+    {
+      "path": "lumencore/services/api/app/main.py",
+      "sha256": "7ad060cdcf56fd8e570d80104ca5e8afd852b18456c27012e2a17e046143afb0",
+      "size_bytes": 1896
+    },
+    {
+      "path": "lumencore/services/api/app/main.py.bak.phase4a1",
+      "sha256": "f8618851895f935e1c8bd7df5bed8530cfbf71817a41dbc0779f75dc4bb9cd49",
+      "size_bytes": 674
+    },
+    {
+      "path": "lumencore/services/api/app/main.py.bak.phase4a1.20260310_2241",
+      "sha256": "f8618851895f935e1c8bd7df5bed8530cfbf71817a41dbc0779f75dc4bb9cd49",
+      "size_bytes": 674
+    },
+    {
+      "path": "lumencore/services/api/app/main.py.bak.phase4a_20260310_2209",
+      "sha256": "543d227bac373eabb2455a0f1976ff241b79c97953046dce2d6530f352561a04",
+      "size_bytes": 428
+    },
+    {
+      "path": "lumencore/services/api/app/main.py.bak.phase4b.20260311_1545",
+      "sha256": "f8618851895f935e1c8bd7df5bed8530cfbf71817a41dbc0779f75dc4bb9cd49",
+      "size_bytes": 674
+    },
+    {
+      "path": "lumencore/services/api/app/models.py",
+      "sha256": "dcb4be252dddc17319b44a1d2f8c14021b5653d4bce42ac6c26c32a43e42b0ec",
+      "size_bytes": 22722
+    },
+    {
+      "path": "lumencore/services/api/app/models.py.bak.phase4_finalize.20260311_162845",
+      "sha256": "dad2a8f16662b5da3617e55ca1b8e0ad5534114f99512998e7c1219434eb1b45",
+      "size_bytes": 9343
+    },
+    {
+      "path": "lumencore/services/api/app/models.py.bak.phase4a1",
+      "sha256": "aaa15ba4b8ea82ebec8c054c5a380bdac12e3446489ead55017a5902def6b6ec",
+      "size_bytes": 5694
+    },
+    {
+      "path": "lumencore/services/api/app/models.py.bak.phase4a1.20260310_2241",
+      "sha256": "aaa15ba4b8ea82ebec8c054c5a380bdac12e3446489ead55017a5902def6b6ec",
+      "size_bytes": 5694
+    },
+    {
+      "path": "lumencore/services/api/app/models.py.bak.phase4a2.20260311_1622",
+      "sha256": "9a992990b1c5c7a995313b036d9fe07f4d03c8fef71cc6cd543d3049ab2b99fa",
+      "size_bytes": 7791
+    },
+    {
+      "path": "lumencore/services/api/app/models.py.bak.phase4a_20260310_2209",
+      "sha256": "ce5c1965ee0150c0f7fe176de65bb4a5e7354409c6aa2166efebdaa5cc5233fa",
+      "size_bytes": 1723
+    },
+    {
+      "path": "lumencore/services/api/app/models.py.bak.phase4b.20260311_1545",
+      "sha256": "3e9532cf07f1bdd154c3105b0ee015c043d7cbd4e601d45e16c24e836b0ebc59",
+      "size_bytes": 6486
+    },
+    {
+      "path": "lumencore/services/api/app/planning/__init__.py",
+      "sha256": "0a0767a89cc6a3dd6050ffb714d82c126e043943f075f89f3c936497ee7596e3",
+      "size_bytes": 438
+    },
+    {
+      "path": "lumencore/services/api/app/planning/__pycache__/__init__.cpython-313.pyc",
+      "sha256": "846dd882b1970cc5a2a1deb12c150fc3c1115b45e6d87c7b2cc95acc5cad3e31",
+      "size_bytes": 529
+    },
+    {
+      "path": "lumencore/services/api/app/planning/__pycache__/decomposer.cpython-313.pyc",
+      "sha256": "a0d5efa02de6cc75776ca723e3743c8d5c72a76e40cb32c7c19688b8a36c87b6",
+      "size_bytes": 1852
+    },
+    {
+      "path": "lumencore/services/api/app/planning/__pycache__/plan_models.cpython-313.pyc",
+      "sha256": "b56e03ca0fbf3199d3be2293692fa1167de6a14fae483fcab7f90ba5cd9f1a7d",
+      "size_bytes": 3900
+    },
+    {
+      "path": "lumencore/services/api/app/planning/__pycache__/plan_runtime.cpython-313.pyc",
+      "sha256": "4c0788766676991952efeafce7a882235edab678d5f45aedd474812773fb54ab",
+      "size_bytes": 12459
+    },
+    {
+      "path": "lumencore/services/api/app/planning/__pycache__/plan_store.cpython-313.pyc",
+      "sha256": "adaa37f931cfacc6fe19391ffe2d7f52fde24c8c46fd6f8b012a5e05a37a8565",
+      "size_bytes": 14670
+    },
+    {
+      "path": "lumencore/services/api/app/planning/decomposer.py",
+      "sha256": "8f7714621ad827aee490eab1b47486f1fb5dbb561b9657b4cc54b15e739d07a3",
+      "size_bytes": 1673
+    },
+    {
+      "path": "lumencore/services/api/app/planning/plan_models.py",
+      "sha256": "39b5bb81e7507f5548773cd8a580fbab5778fbb1671951d430a5e123ea3a2682",
+      "size_bytes": 2216
+    },
+    {
+      "path": "lumencore/services/api/app/planning/plan_runtime.py",
+      "sha256": "6aeaf4e1dd1b81cb35e5209a4fefe6af3bed27d78ca67498565f7a2f0a1dcb71",
+      "size_bytes": 10655
+    },
+    {
+      "path": "lumencore/services/api/app/planning/plan_store.py",
+      "sha256": "c1736a70c31c30b2cdfa52f8f6c39909a0e84e5cef44bdaadda723138e08f143",
+      "size_bytes": 9743
+    },
+    {
+      "path": "lumencore/services/api/app/policy_engine/__init__.py",
+      "sha256": "11f0c2ead62f585d299e06a66a5d67c82c8399de2c772107f38af93e5c53c38a",
+      "size_bytes": 44
+    },
+    {
+      "path": "lumencore/services/api/app/policy_engine/__pycache__/audit_logger.cpython-313.pyc",
+      "sha256": "ed87ddf0b21bf0abed790b713c70540d90ea065b7fb04f43ab593dde4b1eca0d",
+      "size_bytes": 2967
+    },
+    {
+      "path": "lumencore/services/api/app/policy_engine/__pycache__/capability_guard.cpython-313.pyc",
+      "sha256": "7af0ce400618d1e18fbe42609e759838eaea87effda293cb9136f3e7088db742",
+      "size_bytes": 1942
+    },
+    {
+      "path": "lumencore/services/api/app/policy_engine/approval_guard.py",
+      "sha256": "13eb9cdb0d5fd87adbbea58debaeb004a28c2bf14e45f6f8ccc5c37dfbd7c7ae",
+      "size_bytes": 221
+    },
+    {
+      "path": "lumencore/services/api/app/policy_engine/audit_logger.py",
+      "sha256": "bd7daaa9ec677648141a1a5e05a246448918dbc316a35f9db25389198eeda703",
+      "size_bytes": 1883
+    },
+    {
+      "path": "lumencore/services/api/app/policy_engine/budget_guard.py",
+      "sha256": "ac6a73e5979a9d7586c03b25cbdbf3e1c654ce73fbb677ea1359cca5201887cb",
+      "size_bytes": 972
+    },
+    {
+      "path": "lumencore/services/api/app/policy_engine/budget_guard.py.bak.phase4a2.20260311_1622",
+      "sha256": "fbb10e490254fa60731d6506ebe7437811547a84575c57656b2dbb2a0940c021",
+      "size_bytes": 511
+    },
+    {
+      "path": "lumencore/services/api/app/policy_engine/capability_guard.py",
+      "sha256": "663f41003b0fdd5690d51c2345f17a10e94bae74d01ff0d7bdf441e4123179fe",
+      "size_bytes": 1164
+    },
+    {
+      "path": "lumencore/services/api/app/policy_engine/policy_engine.py",
+      "sha256": "644a8d95a72e1e3ffa0be395ed5dcab31951c02b49fe3648337e1134aad5b1e9",
+      "size_bytes": 1810
+    },
+    {
+      "path": "lumencore/services/api/app/policy_engine/policy_engine.py.bak.phase4_finalize.20260311_162845",
+      "sha256": "37f95373d3b709c0806479bdab8bede3e6db4878d86410de8970bab993d0e99b",
+      "size_bytes": 1802
+    },
+    {
+      "path": "lumencore/services/api/app/policy_engine/policy_engine.py.bak.phase4a2.20260311_1622",
+      "sha256": "37f16adcea4775cbf33412d6ed683899298a150adc6b2d2fd23427b68248431c",
+      "size_bytes": 1624
+    },
+    {
+      "path": "lumencore/services/api/app/routes/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "lumencore/services/api/app/routes/__pycache__/agent_runs.cpython-313.pyc",
+      "sha256": "149e8ce8c486a8f5d87e4282e9b0310ba19074b3cf2c243509592c7757c8434c",
+      "size_bytes": 3727
+    },
+    {
+      "path": "lumencore/services/api/app/routes/__pycache__/agents.cpython-313.pyc",
+      "sha256": "d814def828d76d5fa2097d9daca90f9ab7b9a1fc725f980eb116f92bf6691a1c",
+      "size_bytes": 7832
+    },
+    {
+      "path": "lumencore/services/api/app/routes/__pycache__/command.cpython-313.pyc",
+      "sha256": "c21711cce93181cbd879c05c0cfed0a22e253f36b43fbe4e29f4ecd6346ad1b6",
+      "size_bytes": 17507
+    },
+    {
+      "path": "lumencore/services/api/app/routes/__pycache__/command_queue.cpython-313.pyc",
+      "sha256": "77d8b013d7ae70d4c493cf4e925f247e45434238f613ea3c7a8ba766b6733ad4",
+      "size_bytes": 3453
+    },
+    {
+      "path": "lumencore/services/api/app/routes/__pycache__/commands.cpython-313.pyc",
+      "sha256": "93851b27b4362d5f58011460d440eace4396fa2cdfa51600aa69717f07fca92a",
+      "size_bytes": 4125
+    },
+    {
+      "path": "lumencore/services/api/app/routes/__pycache__/connectors.cpython-313.pyc",
+      "sha256": "3c9271dba9c5c2248da787f07d1fff4a22e26cf0c5988642b01bc5ad7f4405a4",
+      "size_bytes": 1610
+    },
+    {
+      "path": "lumencore/services/api/app/routes/__pycache__/execution_tasks.cpython-313.pyc",
+      "sha256": "11244370948a471c8d5717451dde50669290894ab8d3fa4efc6be38814ff4f94",
+      "size_bytes": 3100
+    },
+    {
+      "path": "lumencore/services/api/app/routes/__pycache__/health.cpython-313.pyc",
+      "sha256": "e7e657f2d5874c7b1058ad389c7c2d3d9536d778b97bf3267b816cc7707b4aa9",
+      "size_bytes": 665
+    },
+    {
+      "path": "lumencore/services/api/app/routes/__pycache__/nodes.cpython-313.pyc",
+      "sha256": "7cc8fe95b80855ef3f363aafd4b1b64252e761153270e69b916c26000fd9c5c2",
+      "size_bytes": 1499
+    },
+    {
+      "path": "lumencore/services/api/app/routes/__pycache__/operator.cpython-313.pyc",
+      "sha256": "f8861196ce8a4bd85ffad85fd6dbad660a86dc029b0ec9f4fa08b134135e8558",
+      "size_bytes": 15808
+    },
+    {
+      "path": "lumencore/services/api/app/routes/__pycache__/plans.cpython-313.pyc",
+      "sha256": "800a2a13daaaefc9c20d17eea4afa88c8e8431590ac3a063efb0845a6f528ee6",
+      "size_bytes": 3997
+    },
+    {
+      "path": "lumencore/services/api/app/routes/__pycache__/system.cpython-313.pyc",
+      "sha256": "3f4f7eb9fd2cdb056c27f2a186234115d3df76af21dbdaef037425594b448bf0",
+      "size_bytes": 15096
+    },
+    {
+      "path": "lumencore/services/api/app/routes/__pycache__/workflows.cpython-313.pyc",
+      "sha256": "52000d592ef98705f3c407afcd035325f1e65463a9d4c87d1388e43d366ef81f",
+      "size_bytes": 3092
+    },
+    {
+      "path": "lumencore/services/api/app/routes/agent_runs.py",
+      "sha256": "fad772c76cc9858f69b57462c8eea8ee0e3b7edbb80a67cab7138d98c99938a1",
+      "size_bytes": 2001
+    },
+    {
+      "path": "lumencore/services/api/app/routes/agents.py",
+      "sha256": "6e59e02e9f3578e5c6761fc188efd1720dc459f53842f45f15d526090f74d3a9",
+      "size_bytes": 5621
+    },
+    {
+      "path": "lumencore/services/api/app/routes/agents.py.bak.phase4_finalize.20260311_162845",
+      "sha256": "a8ced7e3de53de9b81327ad36162951b9b542990e6e99f5999551eeae3f60df1",
+      "size_bytes": 3829
+    },
+    {
+      "path": "lumencore/services/api/app/routes/agents.py.bak.phase4a1",
+      "sha256": "809ec0a2f2d79e5941dc9e7edebc64eb1cd4e3618e4157dec88963b4ea5ec9e3",
+      "size_bytes": 2960
+    },
+    {
+      "path": "lumencore/services/api/app/routes/agents.py.bak.phase4a1.20260310_2241",
+      "sha256": "809ec0a2f2d79e5941dc9e7edebc64eb1cd4e3618e4157dec88963b4ea5ec9e3",
+      "size_bytes": 2960
+    },
+    {
+      "path": "lumencore/services/api/app/routes/agents.py.bak.phase4a2.20260311_1622",
+      "sha256": "a8ced7e3de53de9b81327ad36162951b9b542990e6e99f5999551eeae3f60df1",
+      "size_bytes": 3829
+    },
+    {
+      "path": "lumencore/services/api/app/routes/command.py",
+      "sha256": "079bfc7e7d7afa70b5b8a053f17ff2c09e90931d252b1c7139cf0f34c8fa83a1",
+      "size_bytes": 18647
+    },
+    {
+      "path": "lumencore/services/api/app/routes/command.py.bak.phase4_finalize.20260311_162845",
+      "sha256": "d14a26e148eb187b492bb335fcc9717360956a7effe813e5d2aa74c68e9a9833",
+      "size_bytes": 5489
+    },
+    {
+      "path": "lumencore/services/api/app/routes/command.py.bak.phase4a2.20260311_1622",
+      "sha256": "d14a26e148eb187b492bb335fcc9717360956a7effe813e5d2aa74c68e9a9833",
+      "size_bytes": 5489
+    },
+    {
+      "path": "lumencore/services/api/app/routes/command_queue.py",
+      "sha256": "66f9d2f46737a69b6bc0637c156805c0a9c44606d21263b04852ceb9e92048a7",
+      "size_bytes": 2242
+    },
+    {
+      "path": "lumencore/services/api/app/routes/commands.py",
+      "sha256": "1753a305403d7e238cd6a9b2d370accc8fe7e426ffabe18904346c8e1b94ea26",
+      "size_bytes": 2772
+    },
+    {
+      "path": "lumencore/services/api/app/routes/connectors.py",
+      "sha256": "54176f3c0d5376136969cc92a445e1f2afd8255e66250f9bc3c1d9a714f9c6f6",
+      "size_bytes": 1150
+    },
+    {
+      "path": "lumencore/services/api/app/routes/execution_tasks.py",
+      "sha256": "b1a1567103ebeda287b39a675c30c3ffb3723b04a315a8747c6422a7fb9a3869",
+      "size_bytes": 2373
+    },
+    {
+      "path": "lumencore/services/api/app/routes/health.py",
+      "sha256": "be66fb4da27007bf0fce9365c0b16c7d44077fea8647f65b3914840388498631",
+      "size_bytes": 293
+    },
+    {
+      "path": "lumencore/services/api/app/routes/jobs.py",
+      "sha256": "84462cd6e77ece451310a5da56b768788b1aca1224c33f6f4b781eb9fcca5f42",
+      "size_bytes": 4538
+    },
+    {
+      "path": "lumencore/services/api/app/routes/jobs.py.bak.phase3c.20260310_120039",
+      "sha256": "a405f3c76e699d390af34528b7b013727fc41cc73562cc8da3b75672d74b6130",
+      "size_bytes": 2214
+    },
+    {
+      "path": "lumencore/services/api/app/routes/jobs.py.bak.phase3c_stabilize.20260310_122907",
+      "sha256": "783833b1316e5859a69da609da284993d9e3312953b5ebfa2332cef4d2be9049",
+      "size_bytes": 4258
+    },
+    {
+      "path": "lumencore/services/api/app/routes/jobs.py.bak.phase4a_20260310_2209",
+      "sha256": "84462cd6e77ece451310a5da56b768788b1aca1224c33f6f4b781eb9fcca5f42",
+      "size_bytes": 4538
+    },
+    {
+      "path": "lumencore/services/api/app/routes/nodes.py",
+      "sha256": "f13d3d0c268dad329063c60e8c07f553044213817cbe3f036d7c3bc80b1edf30",
+      "size_bytes": 954
+    },
+    {
+      "path": "lumencore/services/api/app/routes/operator.py",
+      "sha256": "8c4fdd61f5d2ee077605ba8cf58da5f34c6c98cdc2d1668db3e543256de28a44",
+      "size_bytes": 11824
+    },
+    {
+      "path": "lumencore/services/api/app/routes/plans.py",
+      "sha256": "0b2fa72745ffb907da31bcb0ebb00bd8b088fc990a5e6df246701740325818f8",
+      "size_bytes": 2985
+    },
+    {
+      "path": "lumencore/services/api/app/routes/system.py",
+      "sha256": "972606a29c66b06b591eb749fb176590f48a44d0a183c4ee153faf06a42230b6",
+      "size_bytes": 11852
+    },
+    {
+      "path": "lumencore/services/api/app/routes/system.py.bak.phase3c.20260310_120039",
+      "sha256": "39af9974f2df80deddc1bf6079ccd98dc73935088a7914f24f395f58440bb7be",
+      "size_bytes": 1431
+    },
+    {
+      "path": "lumencore/services/api/app/routes/system.py.bak.phase3c_stabilize.20260310_122907",
+      "sha256": "8f1b72ce4395d18d27374dd878aed3312924266c5473934b5c638fcb25f95450",
+      "size_bytes": 4357
+    },
+    {
+      "path": "lumencore/services/api/app/routes/system.py.bak.phase4_finalize.20260311_162845",
+      "sha256": "8f6132a85c37577498aa69cf72f0426b81f98099e28c5007642f69705528b317",
+      "size_bytes": 5139
+    },
+    {
+      "path": "lumencore/services/api/app/routes/system.py.bak.phase4a2.20260311_1622",
+      "sha256": "8f6132a85c37577498aa69cf72f0426b81f98099e28c5007642f69705528b317",
+      "size_bytes": 5139
+    },
+    {
+      "path": "lumencore/services/api/app/routes/system.py.bak.phase4a_20260310_2209",
+      "sha256": "930614fbcfc57c6a02696c3dfefcb9626fa5483b1189c49693a6e2e85860a6b2",
+      "size_bytes": 4489
+    },
+    {
+      "path": "lumencore/services/api/app/routes/system.py.bak.phase4b.20260311_1545",
+      "sha256": "d926c3682a98a4475be4af0db46414c9f43bbd256360ed1e5113e330184b1af0",
+      "size_bytes": 4986
+    },
+    {
+      "path": "lumencore/services/api/app/routes/workflows.py",
+      "sha256": "3db3a570ec703050612aa5cb063e622943a1ca0eb9d6868ffe5593f71bb31af6",
+      "size_bytes": 2437
+    },
+    {
+      "path": "lumencore/services/api/app/sandbox/__init__.py",
+      "sha256": "b3ba253ad533889e3e2cb43cbc513bea980180a09fb2bb86d46925bfae916d1d",
+      "size_bytes": 61
+    },
+    {
+      "path": "lumencore/services/api/app/sandbox/sandbox_executor.py",
+      "sha256": "bff99930191127ab6ff0a44fca89428ea05d57da6f858146d75cde7de6ecda57",
+      "size_bytes": 2079
+    },
+    {
+      "path": "lumencore/services/api/app/sandbox/sandbox_executor.py.bak.phase4a2.20260311_1622",
+      "sha256": "150036529ca7e589789f6af95847177d5db37f11253fe316ad4920e3a2ccc00a",
+      "size_bytes": 1999
+    },
+    {
+      "path": "lumencore/services/api/app/sandbox/sandbox_limits.py",
+      "sha256": "735411bfcee7eb4fe0bb2fff667549d4a27d3baae1b515515895852d7f99d820",
+      "size_bytes": 268
+    },
+    {
+      "path": "lumencore/services/api/app/sandbox/sandbox_policy.py",
+      "sha256": "7cc0650724c3920bf4c6f13ddbbf20ad6770d1fa4eedb353be2eb3edbe9cc164",
+      "size_bytes": 511
+    },
+    {
+      "path": "lumencore/services/api/app/sandbox/sandbox_policy.py.bak.phase4a2.20260311_1622",
+      "sha256": "a6b6ab9acb900dad3abcff93d955bcd21c3d760741a5effa3abab710c7b504d6",
+      "size_bytes": 180
+    },
+    {
+      "path": "lumencore/services/api/app/sandbox/sandbox_profiles.py",
+      "sha256": "df3e4d723b7075e4e8968efff4b4f3072826e322a62b1479ef9ad72dfdd42045",
+      "size_bytes": 555
+    },
+    {
+      "path": "lumencore/services/api/app/schemas/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "lumencore/services/api/app/schemas/__pycache__/agent_runs.cpython-313.pyc",
+      "sha256": "fe9b8b50b32495ba76f48bdc1ee282859adb73fde3d98d4e4c43966d53eb44e3",
+      "size_bytes": 1508
+    },
+    {
+      "path": "lumencore/services/api/app/schemas/__pycache__/agents.cpython-313.pyc",
+      "sha256": "314bfba3dee6402e4a3e7b204088c11fd0c8f3e8410c5fabefcc2197c6d766c7",
+      "size_bytes": 5303
+    },
+    {
+      "path": "lumencore/services/api/app/schemas/__pycache__/commands.cpython-313.pyc",
+      "sha256": "b82f2a7db07a9629b6806cc9649c824d34ec4df3aa286a4075491295a1d3ccd8",
+      "size_bytes": 3438
+    },
+    {
+      "path": "lumencore/services/api/app/schemas/__pycache__/connectors.cpython-313.pyc",
+      "sha256": "925425efbddaed62df9e5b662756a81873e4b235aebd1a318f2c21a129d85845",
+      "size_bytes": 1773
+    },
+    {
+      "path": "lumencore/services/api/app/schemas/__pycache__/execution_tasks.cpython-313.pyc",
+      "sha256": "d90e7a175b8e0b4f149df4b1d4a58bf43ae737e20a3ff72bbc8e3164fa278531",
+      "size_bytes": 1496
+    },
+    {
+      "path": "lumencore/services/api/app/schemas/__pycache__/nodes.cpython-313.pyc",
+      "sha256": "78abd1625082140f7d6aab164e4d4a7112dc6aeaa2d2a3a679d48d5242fa7293",
+      "size_bytes": 1813
+    },
+    {
+      "path": "lumencore/services/api/app/schemas/__pycache__/plans.cpython-313.pyc",
+      "sha256": "7d154aac8ab9d9d6ea03f8ea7f239a0c314ab067597bef2292b3ab38cd80cf13",
+      "size_bytes": 2248
+    },
+    {
+      "path": "lumencore/services/api/app/schemas/__pycache__/workflows.cpython-313.pyc",
+      "sha256": "0ea5ea3111b61ec37ffc2b4185e308d088bdb18972be5c0eaf1de1a47eb3e531",
+      "size_bytes": 2196
+    },
+    {
+      "path": "lumencore/services/api/app/schemas/agent_runs.py",
+      "sha256": "7a6cb068cd577835ff8ed084006b97e6065727f3f95059544d89f09004bfd1b0",
+      "size_bytes": 699
+    },
+    {
+      "path": "lumencore/services/api/app/schemas/agents.py",
+      "sha256": "8149a1a6d64e37b26b505c11f4dc71f5b2a0d821a5e9279ca5ffac07acb336d7",
+      "size_bytes": 2650
+    },
+    {
+      "path": "lumencore/services/api/app/schemas/agents.py.bak.phase4_finalize.20260311_162845",
+      "sha256": "261fda5a9fb287ae2d716411a1a2ab68b8d76bb77f3f19160419209fed7d7e24",
+      "size_bytes": 1269
+    },
+    {
+      "path": "lumencore/services/api/app/schemas/agents.py.bak.phase4a1",
+      "sha256": "c8b84583919489c6c31ecaa79f14b5eb74a8f0cc09f9865f4d9ef640a6ac3471",
+      "size_bytes": 1179
+    },
+    {
+      "path": "lumencore/services/api/app/schemas/agents.py.bak.phase4a1.20260310_2241",
+      "sha256": "c8b84583919489c6c31ecaa79f14b5eb74a8f0cc09f9865f4d9ef640a6ac3471",
+      "size_bytes": 1179
+    },
+    {
+      "path": "lumencore/services/api/app/schemas/commands.py",
+      "sha256": "24891adca13edec7df4761487281a1ef7ca44c41f191bc482e8ff3202c5ecdbe",
+      "size_bytes": 2015
+    },
+    {
+      "path": "lumencore/services/api/app/schemas/commands.py.bak.phase4_finalize.20260311_162845",
+      "sha256": "558b88b65050c6cf4885005e752b88fbf445cea9b85ad32b9f681982392c4c8c",
+      "size_bytes": 712
+    },
+    {
+      "path": "lumencore/services/api/app/schemas/connectors.py",
+      "sha256": "36c21b59e4a211de67347352fc9f5ab5f760977d645fb7b6694e111efb8e21ed",
+      "size_bytes": 883
+    },
+    {
+      "path": "lumencore/services/api/app/schemas/execution_tasks.py",
+      "sha256": "7611e288ab0eb16c0daa846e5a0a8c29921cd3058fd42f9ef5b75b63e30afab3",
+      "size_bytes": 716
+    },
+    {
+      "path": "lumencore/services/api/app/schemas/jobs.py",
+      "sha256": "b8869b3e2ed057f4afa5220d31ea20e168631fdbe830c46296c1ddab7a250551",
+      "size_bytes": 1342
+    },
+    {
+      "path": "lumencore/services/api/app/schemas/jobs.py.bak.phase3c.20260310_120039",
+      "sha256": "14b57ce55cfa980d90a29d5e3a0fea04b74b07028f556b871de41c6293a2fc5a",
+      "size_bytes": 811
+    },
+    {
+      "path": "lumencore/services/api/app/schemas/jobs.py.bak.phase4a_20260310_2209",
+      "sha256": "b8869b3e2ed057f4afa5220d31ea20e168631fdbe830c46296c1ddab7a250551",
+      "size_bytes": 1342
+    },
+    {
+      "path": "lumencore/services/api/app/schemas/nodes.py",
+      "sha256": "dca0569d8ae5531634a39a44eb4b1d05695e3f2cbb4a021cc5a594e0cbd89373",
+      "size_bytes": 907
+    },
+    {
+      "path": "lumencore/services/api/app/schemas/plans.py",
+      "sha256": "64073482239c26f81f77abb4912fe90a79b1c7937853ffca33fe3305ae916a77",
+      "size_bytes": 1071
+    },
+    {
+      "path": "lumencore/services/api/app/schemas/workflows.py",
+      "sha256": "9ad71db51e55b9051108c859500b03a3c49ec5f2100295dfe04cfdf98494a265",
+      "size_bytes": 1052
+    },
+    {
+      "path": "lumencore/services/api/app/secrets/__init__.py",
+      "sha256": "eb02e26a139846e7777241b270f5bb0883243fe4af3524babb93ed3697375c14",
+      "size_bytes": 49
+    },
+    {
+      "path": "lumencore/services/api/app/secrets/__pycache__/__init__.cpython-313.pyc",
+      "sha256": "2a38df3de707af8efd41f9a91434f7bb6e5284724f18e5aa0a5feeca0a7acd4c",
+      "size_bytes": 220
+    },
+    {
+      "path": "lumencore/services/api/app/secrets/__pycache__/secret_manager.cpython-313.pyc",
+      "sha256": "b62f420155eb408d2d99542c7c3297531409c9e624167fb28cba3cc6c84e3c50",
+      "size_bytes": 5241
+    },
+    {
+      "path": "lumencore/services/api/app/secrets/__pycache__/secret_policy.cpython-313.pyc",
+      "sha256": "60b8e8ac0d4ff8a57579db710c18e1c2902b70780678bb4b8b4ef6fd46e2cedf",
+      "size_bytes": 672
+    },
+    {
+      "path": "lumencore/services/api/app/secrets/__pycache__/secret_provider.cpython-313.pyc",
+      "sha256": "ba15073137dfec02f46d5cdbe6bed1597f0841e1a13e3081d88d73ab7c5e6bba",
+      "size_bytes": 2473
+    },
+    {
+      "path": "lumencore/services/api/app/secrets/secret_manager.py",
+      "sha256": "b4fd045bc32dba16c22309bffaa05f7560de164c8c88975ecbb015810d619579",
+      "size_bytes": 3359
+    },
+    {
+      "path": "lumencore/services/api/app/secrets/secret_manager.py.bak.phase4a2.20260311_1622",
+      "sha256": "b503ba970351eea870e8f709e3b30798da44b2f422badc845e6af5a0b009aba0",
+      "size_bytes": 559
+    },
+    {
+      "path": "lumencore/services/api/app/secrets/secret_policy.py",
+      "sha256": "0f729576a8156bff8ed72fe2ca8705781030b8f46d2413e6ba0d278677cd3084",
+      "size_bytes": 296
+    },
+    {
+      "path": "lumencore/services/api/app/secrets/secret_provider.py",
+      "sha256": "5a7abe5c4c74f9b945c9bb7786aeebaa946ea50e5a738ffe3a52ead02519472f",
+      "size_bytes": 937
+    },
+    {
+      "path": "lumencore/services/api/app/security.py",
+      "sha256": "ba889a304be12af85372df4690368a2edbe6309a20c628da3e05e4acc3206011",
+      "size_bytes": 341
+    },
+    {
+      "path": "lumencore/services/api/app/services/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "lumencore/services/api/app/services/__pycache__/agents.cpython-313.pyc",
+      "sha256": "e9940ccff10d8d7e0ec59d4f27e4ef605c3e6da9bb8ae062ec33e73cf261e5eb",
+      "size_bytes": 11363
+    },
+    {
+      "path": "lumencore/services/api/app/services/__pycache__/connectors.cpython-313.pyc",
+      "sha256": "9e3bb591dc35b4ab4b43f35e6d597e872676c090bcb8407e0110c142421ff9a1",
+      "size_bytes": 5271
+    },
+    {
+      "path": "lumencore/services/api/app/services/__pycache__/execution_gate.cpython-313.pyc",
+      "sha256": "5f5f122730e2b327478e6454902b3a3dce3062ad52c76e1a2533bf8d1b709a12",
+      "size_bytes": 1971
+    },
+    {
+      "path": "lumencore/services/api/app/services/__pycache__/jobs.cpython-313.pyc",
+      "sha256": "af1bc8423290feb18159046e3bce4cd4e440a5286e7b45565235c683a921466e",
+      "size_bytes": 1938
+    },
+    {
+      "path": "lumencore/services/api/app/services/__pycache__/lifecycle_control.cpython-313.pyc",
+      "sha256": "da35ca143c01015debf9419d5be92d6acd20c46f4176dcb04d27198fd1610344",
+      "size_bytes": 2509
+    },
+    {
+      "path": "lumencore/services/api/app/services/__pycache__/nodes.cpython-313.pyc",
+      "sha256": "3b2570bbb38687f5102818cf8e4972b9f36fbd3eed9f6effafb371a128db95f9",
+      "size_bytes": 8611
+    },
+    {
+      "path": "lumencore/services/api/app/services/__pycache__/observability.cpython-313.pyc",
+      "sha256": "0508e9b50a15edc7d2b504b6945d97e931638c8f9d481fa345eee37bd8f03575",
+      "size_bytes": 34408
+    },
+    {
+      "path": "lumencore/services/api/app/services/__pycache__/operator_guard.cpython-313.pyc",
+      "sha256": "31511beeff6592a2333e955bebded7cbc7d4069886cc9255b3d988dbaeb51f76",
+      "size_bytes": 719
+    },
+    {
+      "path": "lumencore/services/api/app/services/__pycache__/operator_queue.cpython-313.pyc",
+      "sha256": "681cc3f3036de9550d26d2395e8182cca1c44d0fe5b9fa2245abbb8627761ba2",
+      "size_bytes": 6255
+    },
+    {
+      "path": "lumencore/services/api/app/services/__pycache__/operator_summary.cpython-313.pyc",
+      "sha256": "f486f7ff1cdb5978077c923cbbc4a46eee15aa64d923f3e0f249acd6f4034d26",
+      "size_bytes": 16238
+    },
+    {
+      "path": "lumencore/services/api/app/services/__pycache__/runtime_health.cpython-313.pyc",
+      "sha256": "aaa95a576e8ef9e5645bf86d885c9973df6025a6ff899dfaa0feda50181f896c",
+      "size_bytes": 4157
+    },
+    {
+      "path": "lumencore/services/api/app/services/agents.py",
+      "sha256": "284988a2c1ef4f51b020f48460a66cda28a53225b23538e8be14756c814896fc",
+      "size_bytes": 7886
+    },
+    {
+      "path": "lumencore/services/api/app/services/connectors.py",
+      "sha256": "ff41b0403afac123d6e8f55e186730e8d06d071148aee7b299d15b7c141b5eb1",
+      "size_bytes": 4604
+    },
+    {
+      "path": "lumencore/services/api/app/services/execution_gate.py",
+      "sha256": "17b44af19920481fc105410985ad2c14016c1711dfb7c128d6b70746c2b13529",
+      "size_bytes": 1935
+    },
+    {
+      "path": "lumencore/services/api/app/services/jobs.py",
+      "sha256": "ebdd3c67950be841898e88410128944128da31f2d8882bb8d566cdca30856e33",
+      "size_bytes": 1093
+    },
+    {
+      "path": "lumencore/services/api/app/services/jobs.py.bak.phase4a1",
+      "sha256": "a85725792b3f547c2501b9bbc3b6875181607b2616c41ddbd4fc62e2d86a4762",
+      "size_bytes": 1062
+    },
+    {
+      "path": "lumencore/services/api/app/services/jobs.py.bak.phase4a1.20260310_2241",
+      "sha256": "a85725792b3f547c2501b9bbc3b6875181607b2616c41ddbd4fc62e2d86a4762",
+      "size_bytes": 1062
+    },
+    {
+      "path": "lumencore/services/api/app/services/lifecycle_control.py",
+      "sha256": "bf4836047f62ef6bafe1df9e2c8b6aa458659f584c60374b8daa42a542f07c26",
+      "size_bytes": 1779
+    },
+    {
+      "path": "lumencore/services/api/app/services/nodes.py",
+      "sha256": "34432cf005241c5fb359caf78a511279484edb2d168d57c74e4106196ebc538e",
+      "size_bytes": 6386
+    },
+    {
+      "path": "lumencore/services/api/app/services/observability.py",
+      "sha256": "3f2b2a941676610f8f381ecbfa1a7dda672ab579e0a620b435886c61bc2126d2",
+      "size_bytes": 22848
+    },
+    {
+      "path": "lumencore/services/api/app/services/observability.py.bak.phase4_finalize.20260311_162845",
+      "sha256": "72477109720152539aa3b6729af561a74fd724904d3b54a18fc08bad39c71b7b",
+      "size_bytes": 2365
+    },
+    {
+      "path": "lumencore/services/api/app/services/observability.py.bak.phase4a2.20260311_1622",
+      "sha256": "72477109720152539aa3b6729af561a74fd724904d3b54a18fc08bad39c71b7b",
+      "size_bytes": 2365
+    },
+    {
+      "path": "lumencore/services/api/app/services/observability.py.bak.phase4b.20260311_1545",
+      "sha256": "f0d0e611ac8397c3f02deef16c38aae7d04560b4560a695604ebfce61dc6c8c5",
+      "size_bytes": 2220
+    },
+    {
+      "path": "lumencore/services/api/app/services/operator_guard.py",
+      "sha256": "b7ca9a3703f80231c1075dd72b27b8cfc52594a7b368f7ca920d5b6495e967bc",
+      "size_bytes": 338
+    },
+    {
+      "path": "lumencore/services/api/app/services/operator_queue.py",
+      "sha256": "5c09f66c94e5745bced8771a408eda21ac3f971bd161a41d80ab52b0b6852981",
+      "size_bytes": 3793
+    },
+    {
+      "path": "lumencore/services/api/app/services/operator_summary.py",
+      "sha256": "156c554adf7757164b7fc6408932b0630aa8163e16776e0adec2e4eec3d9564f",
+      "size_bytes": 10689
+    },
+    {
+      "path": "lumencore/services/api/app/services/runtime_health.py",
+      "sha256": "69ccfa227271784f646883931fc0ba2e69c47bac6a4f4f12a4a49ad7ecb50926",
+      "size_bytes": 2948
+    },
+    {
+      "path": "lumencore/services/api/app/tenancy/tenant_context.py",
+      "sha256": "95b6aa9bdd8e08126d4e091f9cab51f0cf2b98dee6f8c20f3b84b2d46a4558b1",
+      "size_bytes": 146
+    },
+    {
+      "path": "lumencore/services/api/app/tenancy/tenant_guard.py",
+      "sha256": "f7f112ccf36447aef22e0e5ea6ac574d0819ae1409ea87af8aecc6d53803d77c",
+      "size_bytes": 377
+    },
+    {
+      "path": "lumencore/services/api/app/tools/__init__.py",
+      "sha256": "e709e4779c54042c68214e2d6a0aa9f765f163f3755c7eeeb0d083c700f8c535",
+      "size_bytes": 1268
+    },
+    {
+      "path": "lumencore/services/api/app/tools/__pycache__/__init__.cpython-313.pyc",
+      "sha256": "1fbfa83ccc08a89481b4a42b2eb43b61b91dc23a73703c84cddd47d3a66a2069",
+      "size_bytes": 1134
+    },
+    {
+      "path": "lumencore/services/api/app/tools/__pycache__/audit.cpython-313.pyc",
+      "sha256": "c3f01ef981f4fa87898a51e24e3b45cc66e5551025f71db5d1c54d04a14b11d3",
+      "size_bytes": 8130
+    },
+    {
+      "path": "lumencore/services/api/app/tools/__pycache__/bootstrap.cpython-313.pyc",
+      "sha256": "9d0a2bccf7869851cf0ad74cf2016ffaeb39b8937bfeec56671c8081bac0c85b",
+      "size_bytes": 1913
+    },
+    {
+      "path": "lumencore/services/api/app/tools/__pycache__/exceptions.cpython-313.pyc",
+      "sha256": "f8766680e43c7a93f73f5cccc54b1fe5a1494af766330e31a5224c7bea0a3b6e",
+      "size_bytes": 1265
+    },
+    {
+      "path": "lumencore/services/api/app/tools/__pycache__/models.cpython-313.pyc",
+      "sha256": "986173e7636253e22bd87146f442e65835fd5250dfdc559718b0453dd75c8bc7",
+      "size_bytes": 7255
+    },
+    {
+      "path": "lumencore/services/api/app/tools/__pycache__/policy.cpython-313.pyc",
+      "sha256": "14f0c85a36447b8f68e38895c6f6173808e0edcd9536e4d2df867731c967f29c",
+      "size_bytes": 8365
+    },
+    {
+      "path": "lumencore/services/api/app/tools/__pycache__/registry.cpython-313.pyc",
+      "sha256": "26eda1e47c1987fd519fd5a7791be564aa7a67a83ef74b8bab9ef96347653baf",
+      "size_bytes": 3431
+    },
+    {
+      "path": "lumencore/services/api/app/tools/__pycache__/service.cpython-313.pyc",
+      "sha256": "4b19042c5452699dfedc306631ee4e4d7d972cc6afa2c643f4082ff50b92a5d8",
+      "size_bytes": 14757
+    },
+    {
+      "path": "lumencore/services/api/app/tools/adapters/__init__.py",
+      "sha256": "37f4b68b63956d403cc88f65b5915ef4762d6dce65404bd73dcca60bf408ea75",
+      "size_bytes": 607
+    },
+    {
+      "path": "lumencore/services/api/app/tools/adapters/__pycache__/__init__.cpython-313.pyc",
+      "sha256": "df4c1dfb526aa5e8fa77c1399b75fa4de968a4062b4cff0bf9dd6eadfc9b7ae3",
+      "size_bytes": 876
+    },
+    {
+      "path": "lumencore/services/api/app/tools/adapters/__pycache__/base.cpython-313.pyc",
+      "sha256": "644aa2969a77b000c49cb7087c6c6ddb5d54a27779ea419da7dc2096a66c9d45",
+      "size_bytes": 1226
+    },
+    {
+      "path": "lumencore/services/api/app/tools/adapters/__pycache__/search_adapter.cpython-313.pyc",
+      "sha256": "af963f827d1282040b81793771193b9d8ca8b21a490bae3e2961f5f19f9d9728",
+      "size_bytes": 5720
+    },
+    {
+      "path": "lumencore/services/api/app/tools/adapters/__pycache__/system_adapter.cpython-313.pyc",
+      "sha256": "96c780d8bfff972e00722afbc9f7ceceea1ca027d06f950ba4f789c9c7eef8dd",
+      "size_bytes": 3171
+    },
+    {
+      "path": "lumencore/services/api/app/tools/adapters/base.py",
+      "sha256": "57fd6b0edade45f63cd97a8330e044e957dbbdceb50e0436ad0c8df105b8a710",
+      "size_bytes": 606
+    },
+    {
+      "path": "lumencore/services/api/app/tools/adapters/search_adapter.py",
+      "sha256": "ccb42a50382f2413ba5c1447a4964a16d0fd2c5ff5ca35e7080154cc5be53fd1",
+      "size_bytes": 6550
+    },
+    {
+      "path": "lumencore/services/api/app/tools/adapters/system_adapter.py",
+      "sha256": "90aad7811c21ed4e7f7b19ae2a1116103c594a7e09bf2a0c014dba223302a7bb",
+      "size_bytes": 2488
+    },
+    {
+      "path": "lumencore/services/api/app/tools/audit.py",
+      "sha256": "5bd2277a16a82c62700172b4d2e66c3728cd11ffb70fe7cecc574899f83b3f86",
+      "size_bytes": 8451
+    },
+    {
+      "path": "lumencore/services/api/app/tools/bootstrap.py",
+      "sha256": "7f20d07436cb2bcabd720fde616046a65aef96b76a4d1fe90924154f4d217597",
+      "size_bytes": 2002
+    },
+    {
+      "path": "lumencore/services/api/app/tools/exceptions.py",
+      "sha256": "7d47c23f73c25f73d9fa07efa5a779f103c340111daa619f889bc540866e03a1",
+      "size_bytes": 502
+    },
+    {
+      "path": "lumencore/services/api/app/tools/models.py",
+      "sha256": "5a6e59ab0ab3aef2f00841ceab35b50a88e8a73734ed1cbf9aebfdd2718acce6",
+      "size_bytes": 4561
+    },
+    {
+      "path": "lumencore/services/api/app/tools/policy.py",
+      "sha256": "c2709bd913fc5e8c4619207b3e52f73e37592220c53c34ca913ca6db0b80f1c7",
+      "size_bytes": 5975
+    },
+    {
+      "path": "lumencore/services/api/app/tools/registry.py",
+      "sha256": "7e841e6a19b2e5418352855b593f5627ebf30ecdb523005f4412afb86b02d951",
+      "size_bytes": 1579
+    },
+    {
+      "path": "lumencore/services/api/app/tools/service.py",
+      "sha256": "b54bd39cddfd27063fd633278bff384df8166de5b577d380d7d2a6a3c22b104b",
+      "size_bytes": 15725
+    },
+    {
+      "path": "lumencore/services/api/app/worker_tasks.py",
+      "sha256": "58cd78b379e92eb520438a2fb8687022c1a1114cb8612f37d7f0d716c93c1d35",
+      "size_bytes": 10088
+    },
+    {
+      "path": "lumencore/services/api/app/worker_tasks.py.bak.phase3b.20260310_012007",
+      "sha256": "a66af01d989a1d5f9bd9574fb95795894518800956d0ff8886d97af35b8fa5f0",
+      "size_bytes": 2917
+    },
+    {
+      "path": "lumencore/services/api/app/worker_tasks.py.bak.phase3b_",
+      "sha256": "a66af01d989a1d5f9bd9574fb95795894518800956d0ff8886d97af35b8fa5f0",
+      "size_bytes": 2917
+    },
+    {
+      "path": "lumencore/services/api/app/worker_tasks.py.bak.phase3c.20260310_120039",
+      "sha256": "c07197aaebeeecd4b525a013dbdd176c0d16aba37297614af44b85d0b6385b28",
+      "size_bytes": 4759
+    },
+    {
+      "path": "lumencore/services/api/app/worker_tasks.py.bak.phase4a1",
+      "sha256": "53e07d54a322260eb03eaf851e95eb886f091ce62d1a51af42f7f8dea18e0f94",
+      "size_bytes": 6779
+    },
+    {
+      "path": "lumencore/services/api/app/worker_tasks.py.bak.phase4a1.20260310_2241",
+      "sha256": "53e07d54a322260eb03eaf851e95eb886f091ce62d1a51af42f7f8dea18e0f94",
+      "size_bytes": 6779
+    },
+    {
+      "path": "lumencore/services/api/app/worker_tasks.py.bak.phase4a_20260310_2209",
+      "sha256": "90a125d9043c10e61dc94a0540ea1932fce076a1ae258ae9c2d802d8ad0f9045",
+      "size_bytes": 5982
+    },
+    {
+      "path": "lumencore/services/api/app/workflows/__init__.py",
+      "sha256": "8488bf2c90fd722e1d3c6e7ba13449083504fb87e5bb6d6a79af7376da45d84a",
+      "size_bytes": 511
+    },
+    {
+      "path": "lumencore/services/api/app/workflows/__pycache__/__init__.cpython-313.pyc",
+      "sha256": "614055367812f3e06e30c97db117b7a378abbe985ad5bbe34130f86104bf2533",
+      "size_bytes": 588
+    },
+    {
+      "path": "lumencore/services/api/app/workflows/__pycache__/workflow_definitions.cpython-313.pyc",
+      "sha256": "fb21d8f90107a567514bd7030839ee64f7398bd91b7c3e11701cdef7ff48053d",
+      "size_bytes": 982
+    },
+    {
+      "path": "lumencore/services/api/app/workflows/__pycache__/workflow_models.cpython-313.pyc",
+      "sha256": "daf71654ced73685f33dc3a0f36796fab0299723dd7a062ce142399c5df9ec46",
+      "size_bytes": 2228
+    },
+    {
+      "path": "lumencore/services/api/app/workflows/__pycache__/workflow_runtime.cpython-313.pyc",
+      "sha256": "8c98db80081c2f5586dfa32e86225f088d8cbebaf540049d7c5737fa2c0b98cd",
+      "size_bytes": 8486
+    },
+    {
+      "path": "lumencore/services/api/app/workflows/__pycache__/workflow_store.cpython-313.pyc",
+      "sha256": "f16d61568a0a527945ee59a7201f0c7f3048182c43ccd72d14ff961d7f68b705",
+      "size_bytes": 10582
+    },
+    {
+      "path": "lumencore/services/api/app/workflows/workflow_definitions.py",
+      "sha256": "0e43336691a51e197a176d7c3741e1852cd76c0bb6f4bbc76c752c916b308d0b",
+      "size_bytes": 626
+    },
+    {
+      "path": "lumencore/services/api/app/workflows/workflow_models.py",
+      "sha256": "17ea387fefd3864e8d88319fb67095ec69ff4555bbf1e8a78debacbbddbc6536",
+      "size_bytes": 1161
+    },
+    {
+      "path": "lumencore/services/api/app/workflows/workflow_runtime.py",
+      "sha256": "526ebe3bec051b07a7931d49d9d89b8c1dd58ffdd8fcb8c2c7e35f9f568aaba5",
+      "size_bytes": 7327
+    },
+    {
+      "path": "lumencore/services/api/app/workflows/workflow_store.py",
+      "sha256": "47c71b8ddc228ce9ed501d878acf21eb5294d3f3f73de45be4d48300804ec280",
+      "size_bytes": 7017
+    },
+    {
+      "path": "lumencore/services/api/requirements.txt",
+      "sha256": "7d914312c3177ed2e59eba489d4d7103967a230e3fb6f996834bb2074263a396",
+      "size_bytes": 152
+    }
+  ],
+  "release_id": "lumencore-rc-20260317-01-phase27",
+  "rollback": {
+    "previous_release_id": "phase27-live-20260316-002",
+    "strategy": "re-deploy previous release artifact and manifest without rebuild"
+  },
+  "scope": {
+    "deferred": [
+      "OpenClaw integration",
+      "remote dispatch",
+      "node execution authority"
+    ],
+    "disabled_connectors": [
+      "git"
+    ],
+    "enabled_connector_paths": [
+      "search.web_search"
+    ]
+  },
+  "services": [
+    {
+      "build_context": "/opt/lumencore/services/api",
+      "dockerfile": "/opt/lumencore/services/api/Dockerfile",
+      "name": "lumencore-api",
+      "runtime_entrypoint": "uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    },
+    {
+      "build_context": "/opt/lumencore/services/api",
+      "dockerfile": "/opt/lumencore/services/api/Dockerfile",
+      "name": "lumencore-worker",
+      "runtime_entrypoint": "celery -A app.worker_tasks worker"
+    },
+    {
+      "build_context": "/opt/lumencore/services/api",
+      "dockerfile": "/opt/lumencore/services/api/Dockerfile",
+      "name": "lumencore-scheduler",
+      "runtime_entrypoint": "celery -A app.worker_tasks beat"
+    }
+  ],
+  "system_phase": "27",
+  "workspace_root": "C:\\LUMENCORE_SYSTEM"
+}

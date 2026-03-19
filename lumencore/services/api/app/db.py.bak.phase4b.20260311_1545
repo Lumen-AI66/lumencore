@@ -1,0 +1,76 @@
+from __future__ import annotations
+
+from contextlib import contextmanager
+
+from sqlalchemy import create_engine, text
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session, declarative_base, sessionmaker
+
+from .config import settings
+
+
+engine = create_engine(settings.database_url, pool_pre_ping=True, future=True)
+SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
+Base = declarative_base()
+
+
+@contextmanager
+def session_scope() -> Session:
+    session = SessionLocal()
+    try:
+        yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
+def ensure_phase4a1_schema() -> None:
+    statements = [
+        "ALTER TABLE public.phase3_jobs ADD COLUMN IF NOT EXISTS tenant_id VARCHAR(64)",
+        "UPDATE public.phase3_jobs SET tenant_id = 'owner' WHERE tenant_id IS NULL",
+        "ALTER TABLE public.phase3_jobs ALTER COLUMN tenant_id SET DEFAULT 'owner'",
+        "ALTER TABLE public.phase3_jobs ALTER COLUMN tenant_id SET NOT NULL",
+        "ALTER TABLE public.agents ADD COLUMN IF NOT EXISTS tenant_id VARCHAR(64)",
+        "UPDATE public.agents SET tenant_id = 'owner' WHERE tenant_id IS NULL",
+        "ALTER TABLE public.agents ALTER COLUMN tenant_id SET DEFAULT 'owner'",
+        "ALTER TABLE public.agents ALTER COLUMN tenant_id SET NOT NULL",
+        "ALTER TABLE public.agent_runs ADD COLUMN IF NOT EXISTS tenant_id VARCHAR(64)",
+        "UPDATE public.agent_runs SET tenant_id = 'owner' WHERE tenant_id IS NULL",
+        "ALTER TABLE public.agent_runs ALTER COLUMN tenant_id SET DEFAULT 'owner'",
+        "ALTER TABLE public.agent_runs ALTER COLUMN tenant_id SET NOT NULL",
+        """
+        CREATE TABLE IF NOT EXISTS public.agent_audit_events (
+            id VARCHAR(36) PRIMARY KEY,
+            timestamp TIMESTAMPTZ NOT NULL DEFAULT now(),
+            tenant_id VARCHAR(64) NOT NULL DEFAULT 'owner',
+            agent_id UUID NULL REFERENCES public.agents(id) ON DELETE SET NULL,
+            action VARCHAR(128) NOT NULL,
+            policy_result VARCHAR(32) NOT NULL,
+            metadata JSONB NOT NULL DEFAULT '{}'::jsonb
+        )
+        """,
+        "CREATE INDEX IF NOT EXISTS idx_agent_audit_events_timestamp ON public.agent_audit_events (timestamp DESC)",
+    ]
+
+    with engine.begin() as conn:
+        for stmt in statements:
+            conn.execute(text(stmt))
+
+
+def init_db() -> None:
+    from . import models  # noqa: F401
+
+    Base.metadata.create_all(bind=engine)
+    ensure_phase4a1_schema()
+
+
+def check_db() -> dict:
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return {"ok": True, "message": "database reachable"}
+    except SQLAlchemyError as exc:
+        return {"ok": False, "message": str(exc)}

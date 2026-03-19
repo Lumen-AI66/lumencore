@@ -1,0 +1,22 @@
+version: v1
+default_mode: standard
+allowed_origins:
+  - lumencore
+  - openclaw
+allowed_providers:
+  - claude
+blocked_template_ids: []
+redaction:
+  enabled: true
+  profile: pii-basic
+  fields:
+    - email
+    - phone
+    - ssn
+limits:
+  max_input_chars: 16000
+  max_timeout_ms: 120000
+  max_estimated_cost_usd: 1.50
+telemetry:
+  emit_usage_metrics: true
+  emit_trace_events: true

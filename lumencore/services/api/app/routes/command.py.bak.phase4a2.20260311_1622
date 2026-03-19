@@ -1,0 +1,142 @@
+from __future__ import annotations
+
+from datetime import datetime, timezone
+
+from fastapi import APIRouter, Header, HTTPException, Query, status
+
+from ..commands.command_service import (
+    build_read_only_result,
+    create_command_run,
+    get_command_run,
+    interpret_command,
+    list_command_runs,
+    select_agent_if_needed,
+    update_command_run_for_job,
+)
+from ..db import session_scope
+from ..policy_engine.policy_engine import PolicyEngine
+from ..schemas.commands import CommandHistoryResponse, CommandRunRequest, CommandRunResponse
+from ..services.jobs import create_job, get_job, mark_job_queued
+from ..worker_tasks import execute_job
+
+router = APIRouter(prefix='/api/command', tags=['command'])
+policy_engine = PolicyEngine()
+
+
+def _to_response(item) -> CommandRunResponse:
+    return CommandRunResponse(
+        id=item.id,
+        tenant_id=item.tenant_id,
+        command_text=item.command_text,
+        normalized_command=item.normalized_command,
+        intent=item.intent,
+        planned_task_type=item.planned_task_type,
+        selected_agent_id=str(item.selected_agent_id) if item.selected_agent_id else None,
+        status=item.status,
+        job_id=item.job_id,
+        result_summary=item.result_summary,
+        created_at=item.created_at,
+        updated_at=item.updated_at,
+    )
+
+
+@router.post('/run', response_model=CommandRunResponse, status_code=status.HTTP_202_ACCEPTED)
+def command_run(req: CommandRunRequest, x_lumencore_owner_approval: str | None = Header(default=None)) -> CommandRunResponse:
+    tenant_id = (req.tenant_id or 'owner').strip() or 'owner'
+    if tenant_id != 'owner':
+        raise HTTPException(status_code=403, detail='only owner tenant is enabled in current phase')
+
+    command = interpret_command(req.command_text)
+    parsed = command['parsed']
+    plan = command['plan']
+    owner_approved = (x_lumencore_owner_approval or '').strip().lower() == 'true'
+
+    with session_scope() as session:
+        selected_agent_id = select_agent_if_needed(session, plan)
+
+        if plan['read_only']:
+            summary = build_read_only_result(session, plan['intent'])
+            run = create_command_run(
+                session,
+                tenant_id=tenant_id,
+                command_text=req.command_text,
+                normalized_command=parsed['normalized_command'],
+                intent=plan['intent'],
+                planned_task_type=plan['task_type'],
+                selected_agent_id=selected_agent_id,
+                status='completed',
+                result_summary=summary,
+            )
+            return _to_response(run)
+
+        validation = policy_engine.validate_agent_request(
+            session,
+            tenant_id=tenant_id,
+            task_type=plan['task_type'],
+            requested_agent_id=selected_agent_id,
+            owner_approved=owner_approved,
+            estimated_cost=0.0,
+        )
+
+        if not validation.allowed:
+            run = create_command_run(
+                session,
+                tenant_id=tenant_id,
+                command_text=req.command_text,
+                normalized_command=parsed['normalized_command'],
+                intent=plan['intent'],
+                planned_task_type=plan['task_type'],
+                selected_agent_id=selected_agent_id,
+                status='failed',
+                result_summary={'error': validation.reason},
+            )
+            denied_response = _to_response(run)
+        else:
+            payload = {
+                'task_type': plan['task_type'],
+                'payload': plan['payload'],
+                'owner_approved': owner_approved,
+                'agent_id': selected_agent_id,
+                'tenant_id': tenant_id,
+                'requested_at': datetime.now(timezone.utc).isoformat(),
+                'command': parsed['normalized_command'],
+            }
+            job = create_job(session, 'agent_task', payload, tenant_id=tenant_id)
+            task = execute_job.delay(job.id)
+            job = mark_job_queued(session, job, task.id)
+            run = create_command_run(
+                session,
+                tenant_id=tenant_id,
+                command_text=req.command_text,
+                normalized_command=parsed['normalized_command'],
+                intent=plan['intent'],
+                planned_task_type=plan['task_type'],
+                selected_agent_id=selected_agent_id,
+                status=job.status.value,
+                job_id=job.id,
+            )
+            success_response = _to_response(run)
+
+    if not validation.allowed:
+        raise HTTPException(status_code=403, detail=validation.reason)
+
+    return success_response
+
+
+@router.get('/history', response_model=CommandHistoryResponse)
+def command_history(limit: int = Query(default=20, ge=1, le=100)) -> CommandHistoryResponse:
+    with session_scope() as session:
+        items = list_command_runs(session, limit=limit)
+        for item in items:
+            update_command_run_for_job(session, item)
+        return CommandHistoryResponse(limit=limit, items=[_to_response(x) for x in items])
+
+
+@router.get('/{command_id}', response_model=CommandRunResponse)
+def command_get(command_id: str) -> CommandRunResponse:
+    with session_scope() as session:
+        item = get_command_run(session, command_id)
+        if not item:
+            raise HTTPException(status_code=404, detail='command not found')
+        item = update_command_run_for_job(session, item)
+        return _to_response(item)

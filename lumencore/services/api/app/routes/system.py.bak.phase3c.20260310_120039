@@ -1,0 +1,55 @@
+import socket
+
+from fastapi import APIRouter
+from redis import Redis
+from redis.exceptions import RedisError
+
+from ..config import settings
+from ..db import check_db
+
+router = APIRouter(prefix="/api/system", tags=["system"])
+
+
+def check_redis() -> dict:
+    try:
+        client = Redis(
+            host=settings.redis_host,
+            port=settings.redis_port,
+            password=settings.redis_password or None,
+            db=settings.celery_broker_db,
+            socket_connect_timeout=2,
+            socket_timeout=2,
+            decode_responses=True,
+        )
+        pong = client.ping()
+        return {"ok": bool(pong), "message": "redis reachable" if pong else "redis ping failed"}
+    except RedisError as exc:
+        return {"ok": False, "message": str(exc)}
+
+
+@router.get("/health")
+def system_health() -> dict:
+    db_status = check_db()
+    redis_status = check_redis()
+    overall_ok = db_status["ok"] and redis_status["ok"]
+
+    return {
+        "status": "ok" if overall_ok else "degraded",
+        "service": "lumencore-api",
+        "phase": 2,
+        "components": {
+            "database": db_status,
+            "redis": redis_status,
+        },
+    }
+
+
+@router.get("/info")
+def system_info() -> dict:
+    return {
+        "service": "lumencore-api",
+        "phase": 2,
+        "environment": settings.app_env,
+        "hostname": socket.gethostname(),
+        "api_port": settings.api_port,
+    }
