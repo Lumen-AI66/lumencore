@@ -1,4 +1,45 @@
 services:
+
+  lumencore-dashboard:
+    build:
+      context: /opt/lumencore/lumencore/deploy/dashboard
+      dockerfile: Dockerfile
+    image: lumencore-dashboard:phase2
+    container_name: lumencore-dashboard
+    restart: unless-stopped
+    expose:
+      - "8080"
+    networks:
+      - lumencore-public
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=3).read()"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  lumencore-proxy:
+    image: nginx:alpine
+    container_name: lumencore-proxy
+    restart: unless-stopped
+    depends_on:
+      lumencore-dashboard:
+        condition: service_healthy
+      lumencore-api:
+        condition: service_healthy
+    ports:
+      - "80:80"
+    volumes:
+      - /opt/lumencore/vps/nginx/lumencore.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - lumencore-public
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1/healthz || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
   lumencore-api:
     build:
       context: /opt/lumencore/services/api
