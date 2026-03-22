@@ -67,12 +67,18 @@ def command_approve(command_id: str) -> CommandRunResponse:
         job = mark_job_queued(session, job, task.id)
         run.job_id = job.id
         run.status = job.status.value
+        run.approval_required = False
         run.approval_status = "approved"
+        run.last_control_action = "approve"
+        run.last_control_reason = "workflow_job approved"
         run.updated_at = datetime.now(timezone.utc)
         run.result_summary = {
             "approval_status": "approved",
             "policy_reason": run.policy_reason,
             "job_id": job.id,
+            "control_status": "approved",
+            "control_reason": "workflow_job approved",
+            "project_id": (run.result_summary or {}).get("project_id"),
         }
         session.add(run)
         session.flush()
