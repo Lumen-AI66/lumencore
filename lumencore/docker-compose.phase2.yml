@@ -42,7 +42,7 @@ services:
 
   lumencore-api:
     build:
-      context: /opt/lumencore/services/api
+      context: /opt/lumencore/lumencore/services/api
       dockerfile: Dockerfile
     image: lumencore-api:phase2
     container_name: lumencore-api
@@ -77,7 +77,7 @@ services:
 
   lumencore-worker:
     build:
-      context: /opt/lumencore/services/api
+      context: /opt/lumencore/lumencore/services/api
       dockerfile: Dockerfile
     image: lumencore-api:phase2
     container_name: lumencore-worker
@@ -112,7 +112,7 @@ services:
 
   lumencore-scheduler:
     build:
-      context: /opt/lumencore/services/api
+      context: /opt/lumencore/lumencore/services/api
       dockerfile: Dockerfile
     image: lumencore-api:phase2
     container_name: lumencore-scheduler
