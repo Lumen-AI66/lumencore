@@ -195,8 +195,21 @@ def list_operator_agent_run_items(session: Session, *, limit: int = 20, status: 
 
 
 def build_operator_queue_view(session: Session, *, limit: int = 20) -> dict[str, list[dict[str, Any]]]:
-    items = _load_recent_commands(session, limit=max(limit * 3, 20))
-    partitioned = partition_operator_runtime_queue(items, limit=limit)
+    safe_limit = max(1, min(int(limit), 100))
+    items = list(
+        session.execute(
+            select(CommandRun)
+            .where(CommandRun.status.in_(["pending", "queued", "running"]))
+            .order_by(CommandRun.created_at.desc())
+        ).scalars()
+    )
+    for item in items:
+        update_command_run_for_job(session, item)
+    active_items = [
+        item for item in items
+        if str(item.status or "").strip().lower() in {"pending", "queued", "running"}
+    ]
+    partitioned = partition_operator_runtime_queue(active_items, limit=safe_limit)
     return {
         "queued_commands": [build_operator_command_item(item) for item in partitioned["queued_commands"]],
         "running_commands": [build_operator_command_item(item) for item in partitioned["running_commands"]],
