@@ -354,3 +354,9 @@ eady is now only possible when a registry entry has both an explicit built-in ru
 - Decision: Route-level command execution logic is factored into a shared non-route callable in `lumencore/services/api/app/commands/command_runtime.py`, and both `/api/command/run` and `/api/input/command` invoke that callable.
 - Rationale: This removes route-to-route coupling without changing the canonical command contract, parser/planner ownership, execution branching, or response shape.
 
+
+
+## D-058 Phase 45 Closes The Operator Live-Readiness Boundary On Existing Read Surfaces
+- Date: 2026-03-23
+- Decision: Treat the current operator live-readiness boundary as closed on the existing `/api/operator/*` read surfaces and the standalone proxied control-center surface, without adding new runtime architecture or UI scope.
+- Rationale: Phases 40-44 established coherent operator summary, recent-item, and queue truth directly against persisted lifecycle state on the VPS. The remaining gap was factual boundary visibility, not runtime behavior. Closing that boundary in status/decision records preserves the bounded live-v1 posture without reopening execution, lifecycle, or dashboard architecture.

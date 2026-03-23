@@ -1202,3 +1202,30 @@ Features:
 - Direct command failure behavior is deterministic and operationally observable.
 - Existing command IDs and command history surfaces remain traceable and usable after the hardening pass.
 - No standalone services, connectors, or external input layers were added.
+
+
+## Session Update - 2026-03-23 (Phase 45 Operator Live-Readiness Boundary)
+### Files Inspected
+- `lumencore/services/api/app/routes/operator.py`
+- `lumencore/services/api/app/services/operator_summary.py`
+- `lumencore/services/api/app/services/operator_queue.py`
+- `lumencore/services/api/app/services/observability.py`
+- `docs/IMPLEMENTATION_STATUS.md`
+- `docs/DECISIONS.md`
+
+### Files Changed
+- `docs/IMPLEMENTATION_STATUS.md`
+- `docs/DECISIONS.md`
+
+### Completed
+- Re-verified the current operator read model directly against live VPS runtime and persisted command state.
+- Confirmed `/api/operator/summary` now reports status counts and approval-required totals that match persisted `command_runs` truth.
+- Confirmed recent operator command items no longer expose stale approval semantics for approved or terminal rows.
+- Confirmed `/api/operator/queue` now reflects the full current active queued/running population after job-backed refresh, instead of a recent-command sample.
+- Confirmed operator attention, queue size, recent items, and queue endpoint now tell one coherent lifecycle story.
+- Confirmed the live control-center/operator boundary remains the standalone dashboard served through the current proxy, while operator truth is sourced from the existing `/api/operator/*` surfaces.
+
+### Current Phase 45 Status
+- The operator read model is operationally ready for a bounded live-v1 usage phase.
+- Read-model truth is now coherent across summary, recent items, queue exposure, and operator attention.
+- No execution-flow, lifecycle, schema, connector, or UI redesign work was required for this boundary closeout.
