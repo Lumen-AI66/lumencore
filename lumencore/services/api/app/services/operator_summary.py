@@ -54,6 +54,12 @@ def _normalize_operator_status(run: CommandRun) -> str:
     return "failed"
 
 
+def _is_currently_awaiting_approval(run: CommandRun) -> bool:
+    status = str(run.status or "").strip().lower()
+    approval_status = str(run.approval_status or "").strip().lower()
+    return approval_status == "required" and status == "pending" and not run.job_id
+
+
 def build_operator_command_item(run: CommandRun) -> dict[str, Any]:
     timestamp = run.updated_at or run.created_at
     runtime_status = str(run.status or "").strip().lower() or None
@@ -71,7 +77,7 @@ def build_operator_command_item(run: CommandRun) -> dict[str, Any]:
         "requested_mode": run.requested_mode,
         "selected_agent_id": str(run.selected_agent_id) if run.selected_agent_id else None,
         "execution_decision": run.execution_decision,
-        "approval_required": run.approval_required,
+        "approval_required": _is_currently_awaiting_approval(run),
         "approval_status": run.approval_status,
         "policy_reason": run.policy_reason,
         "job_id": run.job_id,
