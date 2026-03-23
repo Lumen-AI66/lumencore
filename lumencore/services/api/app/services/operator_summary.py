@@ -211,6 +211,7 @@ def generate_operator_summary(session: Session, *, limit: int = 10) -> dict[str,
     execution_gate = get_execution_gate_snapshot(session)
     operator_attention = get_operator_queue_snapshot(session)
     runtime_health = get_runtime_health_snapshot()
+    approval_counts = dict(execution_gate.get("state_summary", {}).get("by_approval_status", {}))
 
     return {
         "recent_commands": recent_commands,
@@ -220,7 +221,7 @@ def generate_operator_summary(session: Session, *, limit: int = 10) -> dict[str,
         "operator_events": get_operator_event_snapshot(session, limit=20),
         "commands": {
             "counts_by_status": raw_counts,
-            "approval_required_total": int(execution_gate.get("current_totals", {}).get("approval_required_total", 0)),
+            "approval_required_total": int(approval_counts.get("required", 0)),
             "denied_total": int(execution_gate.get("current_totals", {}).get("execution_denied_total", 0)),
         },
         "jobs": {
