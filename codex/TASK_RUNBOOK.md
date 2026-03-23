@@ -6,6 +6,15 @@
 - Keep all changes non-destructive and reversible.
 - Update `docs/IMPLEMENTATION_STATUS.md` and `docs/DECISIONS.md` at each milestone boundary.
 
+## VPS Patch Safety
+- Do not patch repo files on the VPS with inline substring replacement scripts.
+- Apply VPS code changes as full-file writes only.
+- Preferred method:
+  - `cat <<'EOF' | python3 /opt/lumencore/codex/write_full_file.py /absolute/path/to/file.py --py-compile`
+  - file contents
+  - `EOF`
+- After each write, re-read the file and run `python3 -m py_compile` for Python targets before rebuilding or restarting anything.
+
 ## Milestone Runbook
 
 ### Milestone 1: Lumencore Dashboard Stabilization
