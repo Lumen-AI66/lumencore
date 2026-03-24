@@ -15,6 +15,7 @@ class ConnectorPolicyResult:
 _DEFAULT_ENABLEMENT: dict[str, bool] = {
     "git": False,
     "search": False,
+    "openai": False,
 }
 
 
@@ -60,3 +61,4 @@ def evaluate_connector_policy(
             return ConnectorPolicyResult(False, "project scope is not allowed for connector", "project_not_allowed")
 
     return ConnectorPolicyResult(True, "connector policy approved", "connector_policy_approved")
+

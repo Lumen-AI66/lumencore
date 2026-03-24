@@ -12,6 +12,9 @@ from .agent_types import AgentStep, BaseAgent
 MAX_AGENT_STEPS = 5
 
 StepExecutor = Callable[[AgentStep], ToolResult]
+StepTransform = Callable[[AgentStep], AgentStep]
+PlanExecutor = Callable[[Callable[[], list[AgentStep]]], list[AgentStep]]
+ActExecutor = Callable[[Callable[[], AgentStep]], AgentStep]
 
 
 @dataclass(frozen=True)
@@ -34,8 +37,18 @@ def _derive_status(results: list[ToolResult]) -> str:
     return "completed"
 
 
-def run_agent(agent: BaseAgent, task: dict[str, Any], *, step_executor: StepExecutor) -> AgentLoopResult:
-    planned_steps = agent.plan(task or {})
+def run_agent(
+    agent: BaseAgent,
+    task: dict[str, Any],
+    *,
+    step_executor: StepExecutor,
+    plan_executor: PlanExecutor | None = None,
+    act_executor: ActExecutor | None = None,
+) -> AgentLoopResult:
+    if plan_executor is None:
+        planned_steps = agent.plan(task or {})
+    else:
+        planned_steps = plan_executor(lambda: agent.plan(task or {}))
     if len(planned_steps) > MAX_AGENT_STEPS:
         raise RuntimeError("Agent step limit exceeded")
 
@@ -44,7 +57,10 @@ def run_agent(agent: BaseAgent, task: dict[str, Any], *, step_executor: StepExec
     tools_used: list[str] = []
 
     for step in planned_steps:
-        executed_step = agent.act(step)
+        if act_executor is None:
+            executed_step = agent.act(step)
+        else:
+            executed_step = act_executor(lambda step=step: agent.act(step))
         tool_result = step_executor(executed_step)
         tool_results.append(tool_result)
         tools_used.append(executed_step.tool_name)
@@ -58,3 +74,4 @@ def run_agent(agent: BaseAgent, task: dict[str, Any], *, step_executor: StepExec
         step_results=step_results,
         duration_ms=duration_ms,
     )
+

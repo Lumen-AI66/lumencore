@@ -1,7 +1,15 @@
 CONNECTOR_ENABLEMENT:
   git: false
   search: true
+  openai: true
 AGENT_CONNECTOR_PERMISSIONS:
   command-system:
     search:
       - web_search
+  22222222-2222-4222-8222-222222222222:
+    openai:
+      - complete
+  44444444-4444-4444-8444-444444444444:
+    openai:
+      - complete
+

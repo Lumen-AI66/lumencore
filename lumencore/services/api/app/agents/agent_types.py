@@ -46,16 +46,38 @@ class BaseAgent:
             payload=payload,
         )
 
+    def _build_openai_step(self, task: dict[str, Any], *, task_label: str) -> AgentStep:
+        objective = str(task.get("objective") or task.get("query") or task.get("message") or "").strip()
+        query = str(task.get("query") or objective).strip()
+        prompt = str(task.get("prompt") or objective or query).strip()
+        payload = {
+            "prompt": prompt,
+            "objective": objective,
+            "query": query,
+            "model": str(task.get("model") or "gpt-4.1-mini"),
+            "max_output_tokens": int(task.get("max_output_tokens") or 700),
+            "read_only": True,
+            "task_label": task_label,
+            "agent_type": self.agent_type,
+            "agent_name": self.name,
+        }
+        return AgentStep(
+            tool_name="tool.openai.complete",
+            connector_name="openai",
+            action="complete",
+            payload=payload,
+        )
+
 
 class ResearchAgent(BaseAgent):
     agent_type = "research"
     agent_id = "22222222-2222-4222-8222-222222222222"
     name = "research-agent"
     description = "Deterministic research planner that routes safe read-only tasks to governed tools."
-    tools = ("system.echo",)
+    tools = ("tool.openai.complete",)
 
     def plan(self, task: dict[str, Any]) -> list[AgentStep]:
-        return [self._build_echo_step(task, task_label="research-observation")]
+        return [self._build_openai_step(task, task_label="research-observation")]
 
 
 class AutomationAgent(BaseAgent):
@@ -74,7 +96,8 @@ class AnalysisAgent(BaseAgent):
     agent_id = "44444444-4444-4444-8444-444444444444"
     name = "analysis-agent"
     description = "Deterministic analysis planner that emits one governed read-only tool step."
-    tools = ("system.echo",)
+    tools = ("tool.openai.complete",)
 
     def plan(self, task: dict[str, Any]) -> list[AgentStep]:
-        return [self._build_echo_step(task, task_label="analysis-observation")]
+        return [self._build_openai_step(task, task_label="analysis-observation")]
+

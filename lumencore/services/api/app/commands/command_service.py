@@ -189,14 +189,20 @@ def _build_tool_result_summary(tool_result) -> dict:
 
 
 def _build_agent_result_summary(agent_execution: dict, execution_task_id: str | None = None, execution_task_status: str | None = None, execution_task_retries: int | None = None, execution_task_max_retries: int | None = None) -> dict:
-    summary = {
-        "agent_status": agent_execution["status"],
-        "agent_result": agent_execution,
-        "steps_executed": agent_execution.get("steps_executed", 0),
-        "tools_used": agent_execution.get("tools_used", []),
+    result_payload = dict(agent_execution.get("result") or {})
+    step_results = result_payload.get("results") or []
+    first_result = dict(step_results[0]) if step_results and isinstance(step_results[0], dict) else {}
+    tool_output = dict(first_result.get("output") or {})
+
+    agent_result = {
+        "provider": tool_output.get("provider") or "openai",
+        "model": tool_output.get("model"),
+        "output_text": tool_output.get("output_text") or "",
+        "tokens_used": int(tool_output.get("tokens_used") or 0),
         "duration_ms": agent_execution.get("duration_ms"),
-        "task_id": agent_execution.get("task_id"),
-        "registry_key": agent_execution.get("registry_key"),
+    }
+    summary = {
+        "agent_result": agent_result,
     }
     if execution_task_id:
         summary["execution_task_id"] = execution_task_id
@@ -586,6 +592,7 @@ def execute_existing_command_run(session: Session, *, run: CommandRun, project_i
         session.flush()
         record_operator_event("OPERATOR_COMMAND_FAILED", command_id=run.id)
         raise
+
 
 
 

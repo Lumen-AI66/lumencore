@@ -2,13 +2,17 @@ TOOL_ENABLEMENT:
   system.echo: true
   system.health_read: false
   search.web_search: true
+  tool.openai.complete: true
 AGENT_TOOL_PERMISSIONS:
   command-system:
     - system.echo
     - search.web_search
   22222222-2222-4222-8222-222222222222:
     - system.echo
+    - tool.openai.complete
   33333333-3333-4333-8333-333333333333:
     - system.echo
   44444444-4444-4444-8444-444444444444:
     - system.echo
+    - tool.openai.complete
+

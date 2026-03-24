@@ -6,6 +6,24 @@ from .registry import ToolRegistry, get_tool_registry
 
 PLACEHOLDER_TOOLS: tuple[ToolDefinition, ...] = (
     ToolDefinition(
+        tool_name="tool.openai.complete",
+        connector_name="openai",
+        action="complete",
+        description="Bounded read-only OpenAI completion for governed research and analysis output.",
+        risk_level=ToolRiskLevel.low,
+        read_only=True,
+        enabled_by_default=True,
+        tags=("openai", "llm", "read_only", "agent_sync"),
+        capability_metadata={
+            "phase": "50",
+            "external_execution": True,
+            "provider": "openai",
+            "network_scope": "openai_only",
+        },
+        timeout_seconds=30,
+        audit_category="tool.connector",
+    ),
+    ToolDefinition(
         tool_name="system.echo",
         connector_name="system",
         action="echo",
@@ -52,3 +70,4 @@ def register_placeholder_tools(registry: ToolRegistry | None = None) -> ToolRegi
         if not target.has_tool(tool.tool_name):
             target.register_tool(tool)
     return target
+

@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from ..models import AgentRun, AgentRunStatus
 from ..policy_engine.audit_logger import write_audit_event, write_tool_audit_event
-from ..sandbox.sandbox_executor import SandboxExecutor
+from ..sandbox.sandbox_executor import SandboxExecutor, allow_governed_network_calls
 from ..secrets.secret_manager import SecretManager
 from ..tools import ToolRequest, create_tool_mediation_service
 from .agent_loop import run_agent
@@ -275,11 +275,12 @@ def execute_agent(
                 step=step,
                 task=task_payload,
             )
-            tool_result = mediation.mediate(
-                tool_request,
-                tenant_id=tenant_id,
-                project_id=project_id,
-            )
+            with allow_governed_network_calls():
+                tool_result = mediation.mediate(
+                    tool_request,
+                    tenant_id=tenant_id,
+                    project_id=project_id,
+                )
             state_store.append_event(
                 session,
                 run_id=run.id,
@@ -297,7 +298,13 @@ def execute_agent(
             )
             return tool_result
 
-        loop_result = sandbox.execute(lambda: run_agent(deterministic_agent, task_payload, step_executor=_execute_step))
+        loop_result = run_agent(
+            deterministic_agent,
+            task_payload,
+            step_executor=_execute_step,
+            plan_executor=sandbox.execute,
+            act_executor=sandbox.execute,
+        )
         elapsed_seconds = monotonic() - started
         if elapsed_seconds > policy.max_runtime_seconds:
             raise TimeoutError("agent run exceeded max_runtime_seconds")
@@ -657,3 +664,4 @@ def execute_agent_task(
             severity="error",
         )
         raise
+

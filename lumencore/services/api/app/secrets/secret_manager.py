@@ -10,6 +10,7 @@ GITHUB_TOKEN_ENV = "LUMENCORE_GITHUB_TOKEN"
 BRAVE_API_KEY_ENV = "LUMENCORE_BRAVE_API_KEY"
 TAVILY_API_KEY_ENV = "LUMENCORE_TAVILY_API_KEY"
 EXA_API_KEY_ENV = "LUMENCORE_EXA_API_KEY"
+OPENAI_API_KEY_ENV = "LUMENCORE_OPENAI_API_KEY"
 
 SEARCH_PROVIDER_SECRET_ENV = {
     "brave": BRAVE_API_KEY_ENV,
@@ -93,3 +94,4 @@ class SecretManager:
 
         available = self.available_search_providers()
         return available[0] if available else None
+

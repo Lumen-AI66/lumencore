@@ -7,6 +7,9 @@ import socket
 import subprocess
 from typing import Any, Callable
 
+_REAL_SOCKET_CONNECT = socket.socket.connect
+_REAL_CREATE_CONNECTION = socket.create_connection
+
 from .sandbox_limits import SandboxLimits
 from .sandbox_policy import DEFAULT_SANDBOX_PROFILE, sandbox_limits_for_profile
 
@@ -52,6 +55,19 @@ def restricted_environment(limits: SandboxLimits):
         socket.create_connection = original_create_connection
 
 
+@contextmanager
+def allow_governed_network_calls() -> Any:
+    original_socket_connect = socket.socket.connect
+    original_create_connection = socket.create_connection
+    socket.socket.connect = _REAL_SOCKET_CONNECT
+    socket.create_connection = _REAL_CREATE_CONNECTION
+    try:
+        yield
+    finally:
+        socket.socket.connect = original_socket_connect
+        socket.create_connection = original_create_connection
+
+
 class SandboxExecutor:
     def __init__(self, limits: SandboxLimits | None = None, profile: str = DEFAULT_SANDBOX_PROFILE) -> None:
         self.limits = limits or sandbox_limits_for_profile(profile)
@@ -59,3 +75,4 @@ class SandboxExecutor:
     def execute(self, task_callable: Callable[[], Any]) -> Any:
         with restricted_environment(self.limits):
             return task_callable()
+
