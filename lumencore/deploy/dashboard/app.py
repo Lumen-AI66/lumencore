@@ -81,6 +81,9 @@ HTML = """
     .detail-card { border: 1px solid var(--line); border-radius: 10px; padding: 10px; background: var(--soft); }
     .detail-card strong { display: block; margin-top: 4px; }
     .actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0; }
+    .result-panel { border: 1px solid var(--line); border-radius: 12px; background: #fcfbf8; padding: 14px; margin: 12px 0; }
+    .result-grid { display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 12px; }
+    .result-output { margin: 0; background: #171717; color: #f5f5f5; }
     .empty { color: var(--muted); }
     details { margin-top: 12px; }
     pre { white-space: pre-wrap; word-break: break-word; background: #171717; color: #f5f5f5; border-radius: 10px; padding: 12px; overflow: auto; }
@@ -166,6 +169,20 @@ HTML = """
             <div class='detail-card'><span class='label'>Approval</span><strong id='detail-approval'>-</strong></div>
             <div class='detail-card'><span class='label'>Queue Bucket</span><strong id='detail-queue-bucket'>-</strong></div>
           </div>
+          <div id='result-panel' class='result-panel'>
+            <div class='panel-header'>
+              <h3>AI Result</h3>
+              <span id='detail-result-state' class='label'>No governed AI result for this command.</span>
+            </div>
+            <div class='result-grid'>
+              <div class='detail-card'><span class='label'>Provider</span><strong id='detail-result-provider'>-</strong></div>
+              <div class='detail-card'><span class='label'>Model</span><strong id='detail-result-model'>-</strong></div>
+              <div class='detail-card'><span class='label'>Tokens Used</span><strong id='detail-result-tokens'>-</strong></div>
+              <div class='detail-card'><span class='label'>Duration</span><strong id='detail-result-duration'>-</strong></div>
+            </div>
+            <span class='label'>Output</span>
+            <pre id='detail-result-output' class='result-output'>Select a completed AI command to inspect its output.</pre>
+          </div>
           <div id='action-bar' class='actions'></div>
           <div id='action-error' class='message'></div>
           <details>
@@ -210,6 +227,13 @@ HTML = """
 
     function pretty(value) {
       return JSON.stringify(value, null, 2);
+    }
+
+    function formatDuration(value) {
+      if (value === null || value === undefined || value === '') return '-';
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) return String(value);
+      return `${numeric.toFixed(2)} ms`;
     }
 
     function statusTone(value) {
@@ -333,6 +357,27 @@ HTML = """
       }
     }
 
+    function renderAgentResult(item) {
+      const agentResult = (((item || {}).result_summary) || {}).agent_result || null;
+      const state = document.getElementById('detail-result-state');
+      const output = document.getElementById('detail-result-output');
+      if (!agentResult) {
+        state.textContent = 'No governed AI result for this command.';
+        setText('detail-result-provider', '-');
+        setText('detail-result-model', '-');
+        setText('detail-result-tokens', '-');
+        setText('detail-result-duration', '-');
+        output.textContent = 'This command does not have result_summary.agent_result data.';
+        return;
+      }
+      state.textContent = 'Governed AI result loaded from CommandRun.result_summary.agent_result.';
+      setText('detail-result-provider', agentResult.provider || '-');
+      setText('detail-result-model', agentResult.model || '-');
+      setText('detail-result-tokens', agentResult.tokens_used ?? '-');
+      setText('detail-result-duration', formatDuration(agentResult.duration_ms));
+      output.textContent = agentResult.output_text || 'No output_text returned.';
+    }
+
     async function loadOperatorSurface() {
       const [summary, queue] = await Promise.all([
         getJson(endpoints.operatorSummary),
@@ -357,14 +402,22 @@ HTML = """
       selectedCommandId = commandId;
       const item = await getJson(endpoints.commandDetail(commandId));
       currentDetail = item;
+      const agentResult = (((item || {}).result_summary) || {}).agent_result || null;
       const lifecycle = `${item.status || 'unknown'} | ${item.execution_decision || 'unknown'}`;
       const approval = `${item.approval_status || '-'} | required=${item.approval_required ? 'true' : 'false'}`;
       setText('detail-status', item.runtime_status || item.status || 'unknown');
-      setText('detail-summary', item.policy_reason || item.command_text || item.command_id);
+      setText(
+        'detail-summary',
+        (agentResult && `${agentResult.provider || 'ai'} ${agentResult.model || ''}`.trim()) ||
+          item.policy_reason ||
+          item.command_text ||
+          item.command_id
+      );
       setText('detail-command-text', item.command_text || item.command_id || '-');
       setText('detail-lifecycle', lifecycle);
       setText('detail-approval', approval);
       setText('detail-queue-bucket', item.queue_bucket || 'none');
+      renderAgentResult(item);
       document.getElementById('command-detail').textContent = pretty(item);
       document.getElementById('action-error').textContent = '';
       renderActions(item);
@@ -460,3 +513,4 @@ if __name__ == '__main__':
     server = HTTPServer((HOST, PORT), Handler)
     print(f'Dashboard listening on {HOST}:{PORT}')
     server.serve_forever()
+
