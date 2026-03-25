@@ -53,12 +53,15 @@ HTML = """
     .status-ok { color: var(--accent); }
     .status-warn { color: var(--warn); }
     .status-danger { color: var(--danger); }
+    .status-emphasis { font-size: 1.2rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; }
     .attention-list, .queue-list, .recent-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
     .attention-item, .queue-item, .recent-item { border: 1px solid var(--line); border-radius: 10px; padding: 12px; background: #fff; }
     .attention-item { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
     .queue-item button, .recent-item button { width: 100%; text-align: left; border: 0; background: transparent; color: inherit; padding: 0; cursor: pointer; }
     .item-title { font-weight: 700; }
     .item-meta { color: var(--muted); font-size: 0.86rem; margin-top: 4px; }
+    .item-status-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .item-status { font-size: 0.88rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; }
     .badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
     .badge { display: inline-block; padding: 4px 8px; border-radius: 999px; font-size: 0.78rem; background: #efe9e2; color: var(--text); }
     .badge.warn { background: #fff1e8; color: var(--warn); }
@@ -81,8 +84,11 @@ HTML = """
     .detail-card { border: 1px solid var(--line); border-radius: 10px; padding: 10px; background: var(--soft); }
     .detail-card strong { display: block; margin-top: 4px; }
     .actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0; }
+    .error-panel { border: 1px solid #fecaca; border-radius: 12px; background: #fef2f2; padding: 14px; margin: 12px 0; color: var(--danger); }
+    .error-code { display: inline-block; margin-top: 8px; font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
     .result-panel { border: 1px solid var(--line); border-radius: 12px; background: #fcfbf8; padding: 14px; margin: 12px 0; }
     .result-grid { display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 12px; }
+    .result-output-card { padding: 12px; background: #171717; border-radius: 12px; margin-top: 8px; }
     .result-output { margin: 0; background: #171717; color: #f5f5f5; }
     .empty { color: var(--muted); }
     details { margin-top: 12px; }
@@ -169,6 +175,13 @@ HTML = """
             <div class='detail-card'><span class='label'>Approval</span><strong id='detail-approval'>-</strong></div>
             <div class='detail-card'><span class='label'>Queue Bucket</span><strong id='detail-queue-bucket'>-</strong></div>
           </div>
+          <div id='error-panel' class='error-panel' hidden>
+            <div class='panel-header' style='margin-bottom:8px'>
+              <h3>Error</h3>
+              <span id='detail-error-code' class='error-code'>-</span>
+            </div>
+            <strong id='detail-error-message'>-</strong>
+          </div>
           <div id='result-panel' class='result-panel'>
             <div class='panel-header'>
               <h3>AI Result</h3>
@@ -181,7 +194,9 @@ HTML = """
               <div class='detail-card'><span class='label'>Duration</span><strong id='detail-result-duration'>-</strong></div>
             </div>
             <span class='label'>Output</span>
-            <pre id='detail-result-output' class='result-output'>Select a completed AI command to inspect its output.</pre>
+            <div class='result-output-card'>
+              <pre id='detail-result-output' class='result-output'>Select a completed AI command to inspect its output.</pre>
+            </div>
           </div>
           <div id='action-bar' class='actions'></div>
           <div id='action-error' class='message'></div>
@@ -236,6 +251,37 @@ HTML = """
       return `${numeric.toFixed(2)} ms`;
     }
 
+    function formatTimestamp(value) {
+      if (!value) return '-';
+      const parsed = new Date(value);
+      if (Number.isNaN(parsed.getTime())) return String(value);
+      return parsed.toLocaleString();
+    }
+
+    function formatLifecycle(item) {
+      const runtimeStatus = item.runtime_status || item.status || 'unknown';
+      const startedAt = formatTimestamp(item.started_at);
+      const finishedAt = formatTimestamp(item.finished_at);
+      return `STATUS: ${runtimeStatus}\nLIFECYCLE: ${startedAt} -> ${finishedAt}`;
+    }
+
+    function detailSummaryText(item, agentResult) {
+      return (agentResult && `${agentResult.provider || 'ai'} ${agentResult.model || ''}`.trim()) ||
+        item.policy_reason ||
+        item.error_message ||
+        item.command_text ||
+        item.command_id ||
+        '-';
+    }
+
+    function setStatusEmphasis(id, value) {
+      const node = document.getElementById(id);
+      if (!node) return;
+      const tone = statusTone(value) || 'warn';
+      node.className = `status-emphasis status-${tone}`;
+      node.textContent = value || '-';
+    }
+
     function statusTone(value) {
       const lower = String(value || '').toLowerCase();
       if (lower === 'ok' || lower === 'completed' || lower === 'approved') return 'ok';
@@ -277,9 +323,13 @@ HTML = """
         li.className = 'queue-item';
         const button = document.createElement('button');
         button.type = 'button';
+        const status = item.runtime_status || item.status || 'unknown';
         button.innerHTML = `
-          <div class='item-title'>${item.command_text || item.command_id}</div>
-          <div class='item-meta'>${item.runtime_status || item.status} | approval=${item.approval_status || '-'} | ${item.requested_mode || 'auto'}</div>
+          <div class='item-status-row'>
+            <div class='item-title'>${item.command_text || item.command_id}</div>
+            <span class='item-status status-${statusTone(status) || 'warn'}'>${status}</span>
+          </div>
+          <div class='item-meta'>approval=${item.approval_status || '-'} | ${item.requested_mode || 'auto'}</div>
           <div class='badge-row'>
             ${badge(item.queue_bucket || 'active', 'warn')}
             ${badge(item.execution_decision || 'unknown', '')}
@@ -307,7 +357,10 @@ HTML = """
         const approval = item.approval_status || 'not_required';
         const summaryText = item.policy_reason || item.error_code || item.queue_bucket || item.execution_decision || 'no additional context';
         button.innerHTML = `
-          <div class='item-title'>${item.command_text || item.command_id}</div>
+          <div class='item-status-row'>
+            <div class='item-title'>${item.command_text || item.command_id}</div>
+            <span class='item-status status-${statusTone(status) || 'warn'}'>${status}</span>
+          </div>
           <div class='item-meta'>${status} | approval=${approval} | ${summaryText}</div>
           <div class='badge-row'>
             ${badge(status, statusTone(status))}
@@ -362,12 +415,12 @@ HTML = """
       const state = document.getElementById('detail-result-state');
       const output = document.getElementById('detail-result-output');
       if (!agentResult) {
-        state.textContent = 'No governed AI result for this command.';
+        state.textContent = 'No AI result available.';
         setText('detail-result-provider', '-');
         setText('detail-result-model', '-');
         setText('detail-result-tokens', '-');
         setText('detail-result-duration', '-');
-        output.textContent = 'This command does not have result_summary.agent_result data.';
+        output.textContent = 'No AI result available for this command.';
         return;
       }
       state.textContent = 'Governed AI result loaded from CommandRun.result_summary.agent_result.';
@@ -376,6 +429,34 @@ HTML = """
       setText('detail-result-tokens', agentResult.tokens_used ?? '-');
       setText('detail-result-duration', formatDuration(agentResult.duration_ms));
       output.textContent = agentResult.output_text || 'No output_text returned.';
+    }
+
+    function renderErrorState(item) {
+      const panel = document.getElementById('error-panel');
+      const resultSummary = (item && item.result_summary) || {};
+      const runtimeStatus = String(item.runtime_status || item.status || '').toLowerCase();
+      const executionTaskStatus = String(resultSummary.execution_task_status || '').toLowerCase();
+      let errorMessage = resultSummary.error || resultSummary.job_error || resultSummary.error_message || item.error_message || '';
+      let errorCode = resultSummary.error_code || item.error_code || '';
+      if (!errorMessage && executionTaskStatus === 'failed') {
+        errorMessage = 'Execution failed before returning a complete AI result.';
+        errorCode = errorCode || 'execution_failed';
+      } else if (!errorMessage && runtimeStatus === 'failed') {
+        errorMessage = 'Command failed before completion.';
+        errorCode = errorCode || 'command_failed';
+      } else if (!errorMessage && runtimeStatus === 'denied') {
+        errorMessage = item.policy_reason || 'Command was denied by current policy.';
+        errorCode = errorCode || 'command_denied';
+      }
+      if (!errorMessage && !errorCode) {
+        panel.hidden = true;
+        setText('detail-error-code', '-');
+        setText('detail-error-message', '-');
+        return;
+      }
+      panel.hidden = false;
+      setText('detail-error-code', errorCode || '-');
+      setText('detail-error-message', errorMessage || 'Unknown error');
     }
 
     async function loadOperatorSurface() {
@@ -403,20 +484,14 @@ HTML = """
       const item = await getJson(endpoints.commandDetail(commandId));
       currentDetail = item;
       const agentResult = (((item || {}).result_summary) || {}).agent_result || null;
-      const lifecycle = `${item.status || 'unknown'} | ${item.execution_decision || 'unknown'}`;
       const approval = `${item.approval_status || '-'} | required=${item.approval_required ? 'true' : 'false'}`;
-      setText('detail-status', item.runtime_status || item.status || 'unknown');
-      setText(
-        'detail-summary',
-        (agentResult && `${agentResult.provider || 'ai'} ${agentResult.model || ''}`.trim()) ||
-          item.policy_reason ||
-          item.command_text ||
-          item.command_id
-      );
+      setStatusEmphasis('detail-status', item.runtime_status || item.status || 'unknown');
+      setText('detail-summary', detailSummaryText(item, agentResult));
       setText('detail-command-text', item.command_text || item.command_id || '-');
-      setText('detail-lifecycle', lifecycle);
+      setText('detail-lifecycle', formatLifecycle(item));
       setText('detail-approval', approval);
       setText('detail-queue-bucket', item.queue_bucket || 'none');
+      renderErrorState(item);
       renderAgentResult(item);
       document.getElementById('command-detail').textContent = pretty(item);
       document.getElementById('action-error').textContent = '';
@@ -513,4 +588,5 @@ if __name__ == '__main__':
     server = HTTPServer((HOST, PORT), Handler)
     print(f'Dashboard listening on {HOST}:{PORT}')
     server.serve_forever()
+
 
