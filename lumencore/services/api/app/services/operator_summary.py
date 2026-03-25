@@ -9,12 +9,15 @@ from ..commands.command_service import extract_command_result_metadata, update_c
 from ..models import AgentRun, AgentRunStatus, CommandRun, Job, JobStatus
 from ..services.observability import (
     get_agent_run_counts,
-    get_command_status_counts,
-    get_execution_gate_snapshot,
     get_job_status_counts,
     get_operator_event_snapshot,
 )
-from ..services.operator_queue import classify_operator_queue_bucket, get_operator_queue_size, get_operator_queue_snapshot, partition_operator_runtime_queue
+from ..services.operator_queue import (
+    OPERATOR_QUEUE_BUCKETS,
+    OPERATOR_QUEUE_PRECEDENCE,
+    classify_operator_queue_bucket,
+    partition_operator_runtime_queue,
+)
 from ..services.runtime_health import get_runtime_health_snapshot
 
 
@@ -157,6 +160,66 @@ def _load_recent_commands(session: Session, *, limit: int = 20, status: str | No
     return filtered[:safe_limit]
 
 
+def _load_hydrated_summary_commands(session: Session, *, recent_limit: int = 10) -> list[CommandRun]:
+    sample_limit = max(50, min(max(int(recent_limit), 1) * 20, 500))
+    stmt = select(CommandRun).order_by(CommandRun.created_at.desc()).limit(sample_limit)
+    items = list(session.execute(stmt).scalars())
+    for item in items:
+        update_command_run_for_job(session, item)
+    return items
+
+
+def _build_hydrated_command_summary(runs: list[CommandRun], *, recent_limit: int) -> dict[str, Any]:
+    recent_items = runs[: max(1, min(int(recent_limit), 100))]
+
+    raw_counts: dict[str, int] = {}
+    normalized_counts = {"queued": 0, "running": 0, "completed": 0, "failed": 0}
+    by_bucket = {key: 0 for key in OPERATOR_QUEUE_BUCKETS}
+    approval_required_total = 0
+    denied_total = 0
+    queue_size = 0
+
+    for run in runs:
+        runtime_status = str(run.status or "").strip().lower() or "unknown"
+        raw_counts[runtime_status] = int(raw_counts.get(runtime_status, 0)) + 1
+
+        normalized_status = _normalize_operator_status(run)
+        normalized_counts[normalized_status] = int(normalized_counts.get(normalized_status, 0)) + 1
+
+        if _is_currently_awaiting_approval(run):
+            approval_required_total += 1
+
+        if str(run.execution_decision or "").strip().lower() == "denied" or runtime_status == "denied":
+            denied_total += 1
+
+        if runtime_status in {"pending", "queued"}:
+            queue_size += 1
+
+        bucket = classify_operator_queue_bucket(run)
+        if bucket is not None:
+            by_bucket[bucket] += 1
+
+    return {
+        "recent_commands": [build_operator_command_item(item) for item in recent_items],
+        "counts": normalized_counts,
+        "queue_size": int(queue_size),
+        "commands": {
+            "counts_by_status": raw_counts,
+            "approval_required_total": int(approval_required_total),
+            "denied_total": int(denied_total),
+        },
+        "operator_attention": {
+            "current_totals": {
+                "attention_command_total": int(sum(by_bucket.values())),
+            },
+            "state_summary": {
+                "by_bucket": by_bucket,
+                "precedence": OPERATOR_QUEUE_PRECEDENCE,
+            },
+        },
+    }
+
+
 def list_operator_command_items(session: Session, *, limit: int = 20, status: str | None = None, approval_status: str | None = None) -> list[dict[str, Any]]:
     items = _load_recent_commands(session, limit=limit, status=status, approval_status=approval_status)
     return [build_operator_command_item(item) for item in items]
@@ -217,32 +280,19 @@ def build_operator_queue_view(session: Session, *, limit: int = 20) -> dict[str,
 
 
 def generate_operator_summary(session: Session, *, limit: int = 10) -> dict[str, Any]:
-    recent_commands = list_operator_command_items(session, limit=limit)
-    raw_counts = get_command_status_counts(session)
-    command_counts = {
-        "queued": int(raw_counts.get("queued", 0) + raw_counts.get("pending", 0)),
-        "running": int(raw_counts.get("running", 0)),
-        "completed": int(raw_counts.get("completed", 0)),
-        "failed": int(raw_counts.get("failed", 0) + raw_counts.get("denied", 0) + raw_counts.get("cancelled", 0) + raw_counts.get("timeout", 0)),
-    }
+    hydrated_commands = _load_hydrated_summary_commands(session, recent_limit=limit)
+    hydrated_summary = _build_hydrated_command_summary(hydrated_commands, recent_limit=limit)
     job_counts, total_jobs = get_job_status_counts(session)
     agent_run_counts, total_agent_runs = get_agent_run_counts(session)
-    execution_gate = get_execution_gate_snapshot(session)
-    operator_attention = get_operator_queue_snapshot(session)
     runtime_health = get_runtime_health_snapshot()
-    approval_counts = dict(execution_gate.get("state_summary", {}).get("by_approval_status", {}))
 
     return {
-        "recent_commands": recent_commands,
-        "counts": command_counts,
-        "queue_size": get_operator_queue_size(session),
+        "recent_commands": hydrated_summary["recent_commands"],
+        "counts": hydrated_summary["counts"],
+        "queue_size": hydrated_summary["queue_size"],
         "system_health": runtime_health["status"],
         "operator_events": get_operator_event_snapshot(session, limit=20),
-        "commands": {
-            "counts_by_status": raw_counts,
-            "approval_required_total": int(approval_counts.get("required", 0)),
-            "denied_total": int(execution_gate.get("current_totals", {}).get("execution_denied_total", 0)),
-        },
+        "commands": hydrated_summary["commands"],
         "jobs": {
             "counts_by_status": job_counts,
             "total_jobs": total_jobs,
@@ -251,5 +301,6 @@ def generate_operator_summary(session: Session, *, limit: int = 10) -> dict[str,
             "counts_by_status": agent_run_counts,
             "total_runs": total_agent_runs,
         },
-        "operator_attention": operator_attention,
+        "operator_attention": hydrated_summary["operator_attention"],
     }
+
