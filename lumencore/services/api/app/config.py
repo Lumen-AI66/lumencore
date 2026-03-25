@@ -26,7 +26,7 @@ def load_yaml_config(filename: str) -> dict:
 class Settings:
     app_env = os.getenv("APP_ENV", "production")
     api_port = int(os.getenv("API_PORT", "8000"))
-    system_phase = os.getenv("LUMENCORE_SYSTEM_PHASE", "27")
+    system_phase = os.getenv("LUMENCORE_SYSTEM_PHASE", "51")
     release_id = os.getenv("LUMENCORE_RELEASE_ID", "unversioned")
     release_manifest_sha256 = os.getenv("LUMENCORE_RELEASE_MANIFEST_SHA256", "")
 
@@ -62,6 +62,7 @@ class Settings:
 
 
 settings = Settings()
+
 
 
 
