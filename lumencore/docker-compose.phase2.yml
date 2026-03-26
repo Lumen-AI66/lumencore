@@ -65,6 +65,8 @@ services:
       LUMENCORE_RELEASE_MANIFEST_SHA256: ${LUMENCORE_RELEASE_MANIFEST_SHA256:-unset}
     expose:
       - "8000"
+    volumes:
+      - /opt/lumencore/deployment:/opt/lumencore/deployment
     networks:
       - lumencore-internal
       - lumencore-public

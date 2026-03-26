@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
 from .agents.agent_registry import ensure_agent_registry_seeded
+from .config import settings
 from .connectors.startup import register_default_connectors
 from .db import init_db, session_scope
 from .routes.agents import router as agents_router
@@ -19,6 +20,8 @@ from .routes.jobs import router as jobs_router
 from .routes.plans import router as plans_router
 from .routes.system import router as system_router
 from .routes.workflows import router as workflows_router
+from .services.deployment.deployment_service import get_deployment_state, mark_failed_restart, record_deploy, record_restart
+from .services.runtime_health import get_runtime_health_snapshot
 from .tools.bootstrap import register_placeholder_tools
 
 
@@ -32,6 +35,12 @@ def on_startup() -> None:
     init_db()
     with session_scope() as session:
         ensure_agent_registry_seeded(session)
+    record_restart()
+    deployment_state = get_deployment_state()
+    if deployment_state.get("last_known_good_release") != settings.release_id:
+        record_deploy(settings.release_id)
+    if get_runtime_health_snapshot().get("status") != "ok":
+        mark_failed_restart()
 
 
 app.include_router(health_router)
