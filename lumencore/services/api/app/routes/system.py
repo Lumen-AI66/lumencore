@@ -12,7 +12,8 @@ from ..db import session_scope
 from ..models import Agent, CommandRun
 from ..security import internal_observability_boundary
 from ..services.deployment.deployment_service import get_deployment_state
-from ..services.observability import (
+from ..services.observability import
+from ..services.recovery.recovery_service import get_recovery_status (
     get_agent_run_counts,
     get_agent_runtime_snapshot,
     get_agent_state_snapshot,
@@ -67,6 +68,7 @@ def system_health() -> dict:
             "worker": health["worker"],
             "scheduler": health["scheduler"],
         },
+        "recovery": get_recovery_status(),
         "deployment": {
             "last_restart_at": deployment.get("last_restart_at"),
             "restart_count": int(deployment.get("restart_count", 0)),
@@ -158,6 +160,7 @@ def execution_summary() -> dict:
             "release_id": settings.release_id,
             "manifest_sha256": settings.release_manifest_sha256 or None,
         },
+        "recovery": get_recovery_status(),
         "deployment": {
             "last_deploy_at": deployment.get("last_deploy_at"),
             "last_known_good_release": deployment.get("last_known_good_release"),
