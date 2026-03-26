@@ -5,6 +5,17 @@ from datetime import datetime
 
 
 @dataclass(frozen=True)
+class CommandPolicyDecision:
+    outcome: str
+    source: str
+    execution_decision: str
+    approval_required: bool
+    approval_status: str
+    policy_reason: str
+    evaluated_at: datetime
+
+
+@dataclass(frozen=True)
 class ExecutionPolicyDecision:
     allowed: bool
     reason: str | None

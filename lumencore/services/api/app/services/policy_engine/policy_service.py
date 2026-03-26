@@ -7,10 +7,13 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ...models import ExecutionTaskRecord
-from .policy_models import ExecutionPolicyDecision
+from ...policy_engine.policy_engine import PolicyEngine
+from ..execution_gate import evaluate_execution_gate
+from .policy_models import CommandPolicyDecision, ExecutionPolicyDecision
 
 _POLICY_KEY = "execution_policy"
 _DANGEROUS_TERMS = ("delete", "shutdown", "drop")
+_COMMAND_POLICY_ENGINE = PolicyEngine()
 
 
 def _copy_dict(value: dict[str, Any] | None) -> dict[str, Any]:
@@ -63,6 +66,104 @@ def _infer_connector_name(command_run, execution_task) -> str | None:
 
 def _command_text(command_run) -> str:
     return str(getattr(command_run, 'command_text', '') or '').strip().lower()
+
+
+def serialize_command_policy_decision(decision: CommandPolicyDecision) -> dict[str, Any]:
+    return {
+        'outcome': decision.outcome,
+        'source': decision.source,
+        'execution_decision': decision.execution_decision,
+        'approval_required': bool(decision.approval_required),
+        'approval_status': decision.approval_status,
+        'policy_reason': decision.policy_reason,
+        'evaluated_at': decision.evaluated_at.isoformat(),
+    }
+
+
+def merge_command_policy_summary(summary: dict[str, Any] | None, decision: CommandPolicyDecision) -> dict[str, Any]:
+    merged = _copy_dict(summary)
+    merged['policy_decision'] = serialize_command_policy_decision(decision)
+    return merged
+
+
+def evaluate_command_policy(
+    session: Session,
+    *,
+    tenant_id: str,
+    project_id: str,
+    task_type: str,
+    requested_agent_id: str | None,
+    owner_approved: bool,
+    estimated_cost: float,
+    plan: dict,
+    requested_mode: str | None,
+) -> CommandPolicyDecision:
+    now = datetime.now(timezone.utc)
+    gate = evaluate_execution_gate(plan=plan, requested_mode=requested_mode)
+
+    if gate.execution_decision == 'denied':
+        return CommandPolicyDecision(
+            outcome='deny',
+            source='execution_gate',
+            execution_decision='denied',
+            approval_required=False,
+            approval_status=gate.approval_status,
+            policy_reason=gate.policy_reason,
+            evaluated_at=now,
+        )
+
+    if gate.execution_decision == 'approval_required':
+        return CommandPolicyDecision(
+            outcome='require_approval',
+            source='execution_gate',
+            execution_decision='approval_required',
+            approval_required=True,
+            approval_status=gate.approval_status,
+            policy_reason=gate.policy_reason,
+            evaluated_at=now,
+        )
+
+    execution_mode = str(plan.get('execution_mode') or '').strip().lower()
+    if execution_mode in {'sync_read', 'tool_sync', 'agent_sync', 'plan_sync', 'workflow_sync'}:
+        return CommandPolicyDecision(
+            outcome='allow',
+            source='execution_gate',
+            execution_decision='allowed',
+            approval_required=False,
+            approval_status=gate.approval_status,
+            policy_reason=gate.policy_reason,
+            evaluated_at=now,
+        )
+
+    validation = _COMMAND_POLICY_ENGINE.validate_agent_request(
+        session,
+        tenant_id=tenant_id,
+        project_id=project_id,
+        task_type=task_type,
+        requested_agent_id=requested_agent_id,
+        owner_approved=owner_approved,
+        estimated_cost=estimated_cost,
+    )
+    if not validation.allowed:
+        return CommandPolicyDecision(
+            outcome='deny',
+            source='agent_policy',
+            execution_decision='denied',
+            approval_required=False,
+            approval_status='not_required',
+            policy_reason=validation.reason,
+            evaluated_at=now,
+        )
+
+    return CommandPolicyDecision(
+        outcome='allow',
+        source='agent_policy',
+        execution_decision='allowed',
+        approval_required=False,
+        approval_status='not_required',
+        policy_reason=validation.reason,
+        evaluated_at=now,
+    )
 
 
 def _decision_dict(decision: ExecutionPolicyDecision) -> dict[str, Any]:

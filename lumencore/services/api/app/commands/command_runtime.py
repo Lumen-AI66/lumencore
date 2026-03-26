@@ -16,21 +16,23 @@ from ..commands.command_service import (
     select_agent_if_needed,
 )
 from ..db import session_scope
-from ..policy_engine.policy_engine import PolicyEngine
 from ..schemas.commands import CommandRunRequest, CommandRunResponse
 from ..services.read_models import build_command_read_model
-from ..services.execution_gate import evaluate_execution_gate
 from ..services.jobs import create_job, mark_job_queued
 from ..security import internal_route_boundary
+from ..services.policy_engine.policy_service import evaluate_command_policy, merge_command_policy_summary
 from ..tenancy.tenant_guard import enforce_owner_tenant
 from ..worker_tasks import execute_job
 
-policy_engine = PolicyEngine()
 logger = logging.getLogger(__name__)
 
 
 def build_command_run_response(item, execution_task=None) -> CommandRunResponse:
     return CommandRunResponse(**build_command_read_model(item, execution_task))
+
+
+def _with_policy_decision_summary(summary: dict | None, policy_decision) -> dict:
+    return merge_command_policy_summary(summary, policy_decision)
 
 
 def _base_run_kwargs(*, tenant_id: str, command_text: str, parsed: dict, plan: dict, selected_agent_id: str | None, gate, status_value: str) -> dict:
@@ -102,9 +104,19 @@ def execute_command_request(
             owner_approved = (x_lumencore_owner_approval or "").strip().lower() == "true"
 
             selected_agent_id = select_agent_if_needed(session, plan, req.requested_agent_id)
-            gate = evaluate_execution_gate(plan=plan, requested_mode=req.mode)
+            policy_decision = evaluate_command_policy(
+                session,
+                tenant_id=tenant_id,
+                project_id=req.project_id,
+                task_type=plan["task_type"],
+                requested_agent_id=selected_agent_id,
+                owner_approved=owner_approved,
+                estimated_cost=0.0,
+                plan=plan,
+                requested_mode=req.mode,
+            )
 
-            if gate.execution_decision == "denied":
+            if policy_decision.outcome == "deny" and policy_decision.source == "execution_gate":
                 run = create_command_run(
                     session,
                     **_base_run_kwargs(
@@ -113,14 +125,14 @@ def execute_command_request(
                         parsed=parsed,
                         plan=plan,
                         selected_agent_id=selected_agent_id,
-                        gate=gate,
+                        gate=policy_decision,
                         status_value="denied",
                     ),
-                    result_summary={"error": gate.policy_reason, "error_code": "execution_denied"},
+                    result_summary=_with_policy_decision_summary({"error": policy_decision.policy_reason, "error_code": "execution_denied"}, policy_decision),
                 )
                 return build_command_run_response(run)
 
-            if gate.execution_decision == "approval_required":
+            if policy_decision.outcome == "require_approval":
                 run = create_command_run(
                     session,
                     **_base_run_kwargs(
@@ -129,10 +141,10 @@ def execute_command_request(
                         parsed=parsed,
                         plan=plan,
                         selected_agent_id=selected_agent_id,
-                        gate=gate,
+                        gate=policy_decision,
                         status_value="pending",
                     ),
-                    result_summary={"approval_status": gate.approval_status, "policy_reason": gate.policy_reason, "project_id": req.project_id},
+                    result_summary=_with_policy_decision_summary({"approval_status": policy_decision.approval_status, "policy_reason": policy_decision.policy_reason, "project_id": req.project_id}, policy_decision),
                 )
                 return build_command_run_response(run)
 
@@ -146,10 +158,10 @@ def execute_command_request(
                         parsed=parsed,
                         plan=plan,
                         selected_agent_id=selected_agent_id,
-                        gate=gate,
+                        gate=policy_decision,
                         status_value="completed",
                     ),
-                    result_summary=summary,
+                    result_summary=_with_policy_decision_summary(summary, policy_decision),
                 )
                 completed_at = datetime.now(timezone.utc)
                 run.started_at = completed_at
@@ -168,7 +180,7 @@ def execute_command_request(
                         parsed=parsed,
                         plan=plan,
                         selected_agent_id=selected_agent_id,
-                        gate=gate,
+                        gate=policy_decision,
                         status_value="pending",
                     ),
                 )
@@ -185,7 +197,7 @@ def execute_command_request(
                 )
                 finished_at = datetime.now(timezone.utc)
                 run.status = tool_execution["status"]
-                run.result_summary = tool_execution["result_summary"]
+                run.result_summary = _with_policy_decision_summary(tool_execution["result_summary"], policy_decision)
                 run.finished_at = finished_at
                 run.updated_at = finished_at
                 session.add(run)
@@ -201,7 +213,7 @@ def execute_command_request(
                         parsed=parsed,
                         plan=plan,
                         selected_agent_id=selected_agent_id,
-                        gate=gate,
+                        gate=policy_decision,
                         status_value="pending",
                     ),
                 )
@@ -218,7 +230,7 @@ def execute_command_request(
                 )
                 finished_at = datetime.now(timezone.utc)
                 run.status = agent_execution["status"]
-                run.result_summary = agent_execution["result_summary"]
+                run.result_summary = _with_policy_decision_summary(agent_execution["result_summary"], policy_decision)
                 run.finished_at = finished_at
                 run.updated_at = finished_at
                 session.add(run)
@@ -234,7 +246,7 @@ def execute_command_request(
                         parsed=parsed,
                         plan=plan,
                         selected_agent_id=selected_agent_id,
-                        gate=gate,
+                        gate=policy_decision,
                         status_value="pending",
                     ),
                 )
@@ -250,7 +262,7 @@ def execute_command_request(
                 )
                 finished_at = datetime.now(timezone.utc)
                 run.status = plan_execution["status"]
-                run.result_summary = plan_execution["result_summary"]
+                run.result_summary = _with_policy_decision_summary(plan_execution["result_summary"], policy_decision)
                 run.finished_at = finished_at
                 run.updated_at = finished_at
                 session.add(run)
@@ -266,7 +278,7 @@ def execute_command_request(
                         parsed=parsed,
                         plan=plan,
                         selected_agent_id=selected_agent_id,
-                        gate=gate,
+                        gate=policy_decision,
                         status_value="pending",
                     ),
                 )
@@ -282,24 +294,14 @@ def execute_command_request(
                 )
                 finished_at = datetime.now(timezone.utc)
                 run.status = workflow_execution["status"]
-                run.result_summary = workflow_execution["result_summary"]
+                run.result_summary = _with_policy_decision_summary(workflow_execution["result_summary"], policy_decision)
                 run.finished_at = finished_at
                 run.updated_at = finished_at
                 session.add(run)
                 session.flush()
                 return build_command_run_response(run)
 
-            validation = policy_engine.validate_agent_request(
-                session,
-                tenant_id=tenant_id,
-                project_id=req.project_id,
-                task_type=plan["task_type"],
-                requested_agent_id=selected_agent_id,
-                owner_approved=owner_approved,
-                estimated_cost=0.0,
-            )
-
-            if not validation.allowed:
+            if policy_decision.outcome == "deny":
                 run = create_command_run(
                     session,
                     **_base_run_kwargs(
@@ -308,13 +310,13 @@ def execute_command_request(
                         parsed=parsed,
                         plan=plan,
                         selected_agent_id=selected_agent_id,
-                        gate=gate,
+                        gate=policy_decision,
                         status_value="failed",
                     ),
-                    result_summary={"error": validation.reason, "error_code": "policy_denied"},
+                    result_summary=_with_policy_decision_summary({"error": policy_decision.policy_reason, "error_code": "policy_denied"}, policy_decision),
                 )
                 _ = build_command_run_response(run)
-                raise HTTPException(status_code=403, detail=validation.reason)
+                raise HTTPException(status_code=403, detail=policy_decision.policy_reason)
 
             payload = {
                 "task_type": plan["task_type"],
@@ -337,10 +339,11 @@ def execute_command_request(
                     parsed=parsed,
                     plan=plan,
                     selected_agent_id=selected_agent_id,
-                    gate=gate,
+                    gate=policy_decision,
                     status_value=job.status.value,
                 ),
                 job_id=job.id,
+                result_summary=_with_policy_decision_summary(None, policy_decision),
             )
             return build_command_run_response(run)
         except ValueError as exc:
