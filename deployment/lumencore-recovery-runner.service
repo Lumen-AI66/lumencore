@@ -1,0 +1,9 @@
+[Unit]
+Description=Lumencore recovery request runner
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/lumencore
+ExecStart=/usr/bin/python3 /opt/lumencore/deployment/recovery_request_runner.py

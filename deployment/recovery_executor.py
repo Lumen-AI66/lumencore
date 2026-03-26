@@ -43,26 +43,44 @@ def write_requests(requests: list[dict]) -> None:
     os.replace(tmp, REQUESTS_PATH)
 
 
+def execute_request(request: dict) -> dict:
+    action = str(request.get('action') or '')
+    command = ALLOWED_ACTIONS.get(action)
+    request['executed_at'] = now_iso()
+    request['processed_at'] = request['executed_at']
+    if not command:
+        request['status'] = 'failed'
+        request['result'] = 'unsupported'
+        request['error'] = 'unsupported recovery action'
+        request['message'] = 'unsupported recovery action'
+        return request
+    completed = subprocess.run(command, check=False, capture_output=True, text=True)
+    request['status'] = 'completed' if completed.returncode == 0 else 'failed'
+    request['result'] = 'executed' if completed.returncode == 0 else 'failed'
+    request['error'] = None if completed.returncode == 0 else ((completed.stderr or completed.stdout or '').strip() or 'executor failed')
+    request['message'] = (completed.stderr or completed.stdout or '').strip() or None
+    return request
+
+
+def process_request(request_id: str) -> dict:
+    requests = read_requests()
+    processed = None
+    for request in requests:
+        if str(request.get('request_id')) != str(request_id):
+            continue
+        processed = execute_request(request)
+        break
+    write_requests(requests)
+    return processed or {}
+
+
 def process_pending() -> dict:
     requests = read_requests()
     processed = []
     for request in requests:
         if str(request.get('status')) != 'pending':
             continue
-        action = str(request.get('action') or '')
-        command = ALLOWED_ACTIONS.get(action)
-        request['executed_at'] = now_iso()
-        if not command:
-            request['status'] = 'failed'
-            request['result'] = 'unsupported'
-            request['message'] = 'unsupported recovery action'
-            processed.append(request)
-            continue
-        completed = subprocess.run(command, check=False, capture_output=True, text=True)
-        request['status'] = 'completed' if completed.returncode == 0 else 'failed'
-        request['result'] = 'executed' if completed.returncode == 0 else 'failed'
-        request['message'] = (completed.stderr or completed.stdout or '').strip() or None
-        processed.append(request)
+        processed.append(execute_request(request))
     write_requests(requests)
     return {'processed': processed, 'pending_remaining': sum(1 for item in requests if str(item.get('status')) == 'pending')}
 

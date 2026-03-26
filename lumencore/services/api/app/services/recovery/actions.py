@@ -86,8 +86,12 @@ def _request_infra_action(action: str, *, task_id: str | None = None, reason: st
         'reason': reason,
         'status': 'pending',
         'requested_at': _now_iso(),
+        'processing_started_at': None,
+        'processed_at': None,
         'executed_at': None,
+        'attempt_count': 0,
         'result': 'pending',
+        'error': None,
         'message': None,
         'executor': 'host_recovery_executor',
     }

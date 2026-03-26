@@ -61,8 +61,12 @@ def _enrich_action_result(action_result: dict[str, Any] | None) -> dict[str, Any
             'action': request.get('action'),
             'status': request.get('status'),
             'requested_at': request.get('requested_at'),
+            'processing_started_at': request.get('processing_started_at'),
+            'processed_at': request.get('processed_at'),
             'executed_at': request.get('executed_at'),
+            'attempt_count': request.get('attempt_count'),
             'result': request.get('result'),
+            'error': request.get('error'),
             'message': request.get('message'),
             'executor': request.get('executor'),
         }

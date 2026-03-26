@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Lumencore recovery request runner periodically
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=30s
+Unit=lumencore-recovery-runner.service
+
+[Install]
+WantedBy=timers.target
