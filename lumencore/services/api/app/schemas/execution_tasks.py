@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -23,6 +24,16 @@ class ExecutionTaskResponse(BaseModel):
     updated_at: datetime
     finished_at: datetime | None = None
     error: str | None = None
+    execution_task_id: str | None = None
+    execution_task_status: str | None = None
+    result: str | None = None
+    agent_result: dict[str, Any] | None = None
+    connector_name: str | None = None
+    error_code: str | None = None
+    execution_control: dict[str, Any] | None = None
+    execution_policy: dict[str, Any] | None = None
+    execution_lineage: dict[str, Any] | None = None
+    result_summary: dict[str, Any] | None = None
 
 
 class ExecutionTaskListResponse(BaseModel):

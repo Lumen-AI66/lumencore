@@ -15,16 +15,26 @@ from ..commands.command_service import (
     update_command_run_for_job,
 )
 from ..db import session_scope
+from ..execution import get_execution_task_store
 from ..services.jobs import create_job, mark_job_queued
 from ..worker_tasks import execute_job
 from ..schemas.commands import CommandHistoryResponse, CommandRunRequest, CommandRunResponse
 from ..services.lifecycle_control import evaluate_command_transition
 
 router = APIRouter(prefix="/api/command", tags=["command"])
+task_store = get_execution_task_store()
 
 
-def _to_response(item) -> CommandRunResponse:
-    return build_command_run_response(item)
+def _linked_execution_task(session, item):
+    summary = item.result_summary or {}
+    task_id = summary.get("execution_task_id") if isinstance(summary, dict) else None
+    if not task_id:
+        return None
+    return task_store.get_task(session, task_id)
+
+
+def _to_response(session, item) -> CommandRunResponse:
+    return build_command_run_response(item, _linked_execution_task(session, item))
 
 
 @router.post("/run", response_model=CommandRunResponse, status_code=status.HTTP_202_ACCEPTED)
@@ -82,7 +92,7 @@ def command_approve(command_id: str) -> CommandRunResponse:
         }
         session.add(run)
         session.flush()
-        return _to_response(run)
+        return _to_response(session, run)
 
 
 
@@ -109,7 +119,7 @@ def command_cancel(command_id: str) -> CommandRunResponse:
             raise HTTPException(status_code=409, detail=decision.reason)
 
         run = mark_command_cancelled(session, run, reason=decision.reason)
-        return _to_response(run)
+        return _to_response(session, run)
 
 
 @router.post("/{command_id}/retry", response_model=CommandRunResponse, status_code=status.HTTP_202_ACCEPTED)
@@ -134,7 +144,7 @@ def command_retry(command_id: str) -> CommandRunResponse:
             raise HTTPException(status_code=409, detail=decision.reason)
 
         retried = create_retried_command_run(session, run)
-        return _to_response(retried)
+        return _to_response(session, retried)
 
 
 @router.get("/history", response_model=CommandHistoryResponse)
@@ -143,7 +153,7 @@ def command_history(limit: int = Query(default=20, ge=1, le=100)) -> CommandHist
         items = list_command_runs(session, limit=limit)
         for item in items:
             update_command_run_for_job(session, item)
-        return CommandHistoryResponse(limit=limit, items=[_to_response(x) for x in items])
+        return CommandHistoryResponse(limit=limit, items=[_to_response(session, x) for x in items])
 
 
 @router.get("/{command_id}", response_model=CommandRunResponse)
@@ -153,6 +163,6 @@ def command_get(command_id: str) -> CommandRunResponse:
         if not item:
             raise HTTPException(status_code=404, detail="command not found")
         item = update_command_run_for_job(session, item)
-        return _to_response(item)
+        return _to_response(session, item)
 
 

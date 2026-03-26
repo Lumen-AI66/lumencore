@@ -8,7 +8,6 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from ..connectors.audit.connector_audit import get_connector_execution_summary, get_connector_metrics
 from ..db import SessionLocal
 from ..execution import get_execution_scheduler_metrics, get_execution_scheduler_summary
 from ..models import (
@@ -33,8 +32,11 @@ from ..models import (
 )
 from ..planning import get_plan_runtime_metrics, get_plan_runtime_summary
 from ..services.operator_queue import get_operator_queue_snapshot
-from ..tools.audit import get_tool_execution_summary, get_tool_metrics
 from ..workflows import get_workflow_runtime_metrics, get_workflow_runtime_summary
+from .execution import build_execution_truth
+from .execution_control import get_execution_control_snapshot, get_execution_control_state
+from .policy_engine import get_execution_policy_snapshot
+from .read_models import build_execution_task_read_model
 ALL_STATUSES = [JobStatus.pending, JobStatus.queued, JobStatus.running, JobStatus.completed, JobStatus.failed]
 AGENT_RUN_STATUSES = [AgentRunStatus.pending, AgentRunStatus.running, AgentRunStatus.completed, AgentRunStatus.failed]
 EXECUTION_TASK_STATUSES = [ExecutionTaskStatus.pending, ExecutionTaskStatus.running, ExecutionTaskStatus.completed, ExecutionTaskStatus.failed, ExecutionTaskStatus.retrying]
@@ -301,20 +303,168 @@ def get_policy_denies_total(session: Session) -> int:
     return int(total)
 
 
+def _build_persisted_execution_audit_snapshot() -> tuple[dict, dict]:
+    session = SessionLocal()
+    try:
+        records = list(session.execute(select(ExecutionTaskRecord).where(ExecutionTaskRecord.result_summary.is_not(None))).scalars())
+    finally:
+        session.close()
+
+    tool_totals = {
+        "tool_requests_total": 0,
+        "tool_success_total": 0,
+        "tool_denied_total": 0,
+        "tool_failed_total": 0,
+        "tool_timeout_total": 0,
+    }
+    tool_by_tool: dict[str, int] = {}
+    tool_by_connector: dict[str, int] = {}
+    tool_by_agent: dict[str, int] = {}
+    tool_duration_total = 0.0
+    tool_duration_count = 0
+    tool_last_execution_at: str | None = None
+
+    connector_totals = {
+        "connector_calls_total": 0,
+        "connector_denied_total": 0,
+        "connector_errors_total": 0,
+        "connector_success_total": 0,
+        "connector_missing_secret_total": 0,
+        "connector_timeout_total": 0,
+        "connector_validation_failure_total": 0,
+        "connector_provider_failure_total": 0,
+    }
+    connector_by_connector: dict[str, int] = {}
+    connector_by_provider: dict[str, int] = {}
+    connector_by_operation: dict[str, int] = {}
+    denial_reasons: dict[str, int] = {}
+    failure_reasons: dict[str, int] = {}
+    connector_duration_total = 0.0
+    connector_duration_count = 0
+    connector_last_execution_at: str | None = None
+
+    def _increment(bucket: dict[str, int], key: str | None) -> None:
+        label = str(key or "unknown")
+        bucket[label] = int(bucket.get(label, 0)) + 1
+
+    for record in records:
+        truth = build_execution_truth(None, record)
+        task_summary = dict(record.result_summary or {})
+        agent_execution = dict(task_summary.get("agent_execution") or {})
+        result_payload = dict(agent_execution.get("result") or {})
+        results = result_payload.get("results") or []
+
+        for entry in results:
+            if not isinstance(entry, dict):
+                continue
+            status = str(entry.get("status") or "").strip().lower()
+            tool_name = str(entry.get("tool_name") or "").strip() or None
+            connector_name = str(entry.get("connector_name") or truth.get("connector_name") or "").strip() or None
+            output = dict(entry.get("output") or {})
+            provider = output.get("provider") or connector_name
+            operation = entry.get("action")
+            agent_id = entry.get("agent_id") or record.agent_id
+            error_code = entry.get("error_code") or truth.get("error_code")
+            duration_ms = entry.get("duration_ms")
+            completed_at = entry.get("completed_at") or (record.updated_at.isoformat() if record.updated_at else None)
+
+            if tool_name:
+                tool_totals["tool_requests_total"] += 1
+                _increment(tool_by_tool, tool_name)
+                _increment(tool_by_connector, connector_name)
+                _increment(tool_by_agent, agent_id)
+                if status == "success":
+                    tool_totals["tool_success_total"] += 1
+                elif status == "denied":
+                    tool_totals["tool_denied_total"] += 1
+                elif status == "timeout" or error_code == "tool_timeout":
+                    tool_totals["tool_timeout_total"] += 1
+                else:
+                    tool_totals["tool_failed_total"] += 1
+                if duration_ms is not None:
+                    tool_duration_total += float(duration_ms) / 1000.0
+                    tool_duration_count += 1
+                if completed_at and (tool_last_execution_at is None or completed_at > tool_last_execution_at):
+                    tool_last_execution_at = completed_at
+
+            if connector_name:
+                connector_totals["connector_calls_total"] += 1
+                _increment(connector_by_connector, connector_name)
+                _increment(connector_by_provider, provider)
+                _increment(connector_by_operation, operation)
+                if status == "success":
+                    connector_totals["connector_success_total"] += 1
+                elif status == "denied":
+                    connector_totals["connector_denied_total"] += 1
+                    _increment(denial_reasons, error_code or "denied")
+                else:
+                    connector_totals["connector_errors_total"] += 1
+                    _increment(failure_reasons, error_code or "error")
+                if error_code == "missing_secret":
+                    connector_totals["connector_missing_secret_total"] += 1
+                elif error_code in {"timeout", "tool_timeout"}:
+                    connector_totals["connector_timeout_total"] += 1
+                elif error_code == "validation_failed":
+                    connector_totals["connector_validation_failure_total"] += 1
+                elif error_code == "provider_error":
+                    connector_totals["connector_provider_failure_total"] += 1
+                if duration_ms is not None:
+                    connector_duration_total += float(duration_ms)
+                    connector_duration_count += 1
+                if completed_at and (connector_last_execution_at is None or completed_at > connector_last_execution_at):
+                    connector_last_execution_at = completed_at
+
+    tool_execution = {
+        "totals": tool_totals,
+        "by_tool": tool_by_tool,
+        "by_connector": tool_by_connector,
+        "by_agent": tool_by_agent,
+        "avg_duration_seconds": round(tool_duration_total / tool_duration_count, 4) if tool_duration_count else 0.0,
+        "last_execution_at": tool_last_execution_at,
+    }
+    connector_execution = {
+        "totals": connector_totals,
+        "by_connector": connector_by_connector,
+        "by_provider": connector_by_provider,
+        "by_operation": connector_by_operation,
+        "denial_reasons": denial_reasons,
+        "failure_reasons": failure_reasons,
+        "avg_duration_ms": round(connector_duration_total / connector_duration_count, 2) if connector_duration_count else 0.0,
+        "last_execution_at": connector_last_execution_at,
+    }
+    return tool_execution, connector_execution
+
+
 def get_connector_metrics_snapshot() -> dict[str, int]:
-    return get_connector_metrics()
+    _tool_execution, connector_execution = _build_persisted_execution_audit_snapshot()
+    totals = connector_execution.get("totals", {})
+    return {
+        "connector_calls_total": int(totals.get("connector_calls_total", 0)),
+        "connector_denied_total": int(totals.get("connector_denied_total", 0)),
+        "connector_errors_total": int(totals.get("connector_errors_total", 0)),
+    }
 
 
 def get_connector_execution_snapshot() -> dict:
-    return get_connector_execution_summary()
+    _tool_execution, connector_execution = _build_persisted_execution_audit_snapshot()
+    return connector_execution
 
 
 def get_tool_metrics_snapshot() -> dict[str, int]:
-    return get_tool_metrics()
+    tool_execution, _connector_execution = _build_persisted_execution_audit_snapshot()
+    totals = tool_execution.get("totals", {})
+    return {
+        "tool_requests_total": int(totals.get("tool_requests_total", 0)),
+        "tool_success_total": int(totals.get("tool_success_total", 0)),
+        "tool_denied_total": int(totals.get("tool_denied_total", 0)),
+        "tool_failed_total": int(totals.get("tool_failed_total", 0)),
+        "tool_timeout_total": int(totals.get("tool_timeout_total", 0)),
+    }
 
 
 def get_tool_execution_snapshot() -> dict:
-    return get_tool_execution_summary()
+    tool_execution, _connector_execution = _build_persisted_execution_audit_snapshot()
+    return tool_execution
 
 
 def get_execution_scheduler_metrics_snapshot() -> dict[str, int]:
@@ -443,29 +593,47 @@ def get_agent_state_snapshot(session: Session) -> dict:
     }
 
 
+def get_execution_control_snapshot_view(session: Session) -> dict:
+    return get_execution_control_snapshot(session)
+
+
+def get_execution_policy_snapshot_view(session: Session) -> dict:
+    return get_execution_policy_snapshot(session)
+
+
 def get_execution_task_snapshot(session: Session) -> dict:
     counts, total = get_execution_task_counts(session)
     latest_task = session.execute(
         select(ExecutionTaskRecord).order_by(ExecutionTaskRecord.updated_at.desc()).limit(1)
     ).scalar_one_or_none()
+    latest_command = session.get(CommandRun, latest_task.command_id) if latest_task and latest_task.command_id else None
+    latest_control_state = get_execution_control_state(session, latest_task.task_id) if latest_task is not None else None
+    latest_policy_state = dict((latest_task.task_metadata or {}).get('execution_policy') or {}) or None if latest_task is not None else None
+    latest_task_model = build_execution_task_read_model(
+        latest_task,
+        latest_command,
+        execution_control=latest_control_state.model_dump(mode="json") if latest_control_state is not None else None,
+        execution_policy=latest_policy_state,
+    ) if latest_task is not None else None
     return {
         "counts_by_status": counts,
         "total_tasks": total,
-        "latest_task": None if latest_task is None else {
-            "task_id": latest_task.task_id,
-            "command_id": latest_task.command_id,
-            "agent_id": str(latest_task.agent_id) if latest_task.agent_id else None,
-            "agent_type": latest_task.agent_type,
-            "task_type": latest_task.task_type,
-            "status": latest_task.status.value if isinstance(latest_task.status, ExecutionTaskStatus) else str(latest_task.status),
-            "priority": latest_task.priority,
-            "retries": latest_task.retries,
-            "max_retries": latest_task.max_retries,
-            "available_at": latest_task.available_at.isoformat() if latest_task.available_at else None,
-            "updated_at": latest_task.updated_at.isoformat() if latest_task.updated_at else None,
-            "finished_at": latest_task.finished_at.isoformat() if latest_task.finished_at else None,
-            "error": latest_task.error,
+        "latest_task": None if latest_task_model is None else {
+            "task_id": latest_task_model.get("task_id"),
+            "command_id": latest_task_model.get("command_id"),
+            "agent_id": latest_task_model.get("agent_id"),
+            "agent_type": latest_task_model.get("agent_type"),
+            "task_type": latest_task_model.get("task_type"),
+            "status": latest_task_model.get("status"),
+            "priority": latest_task_model.get("priority"),
+            "retries": latest_task_model.get("retries"),
+            "max_retries": latest_task_model.get("max_retries"),
+            "available_at": latest_task_model.get("available_at").isoformat() if latest_task_model.get("available_at") else None,
+            "updated_at": latest_task_model.get("updated_at").isoformat() if latest_task_model.get("updated_at") else None,
+            "finished_at": latest_task_model.get("finished_at").isoformat() if latest_task_model.get("finished_at") else None,
+            "error": latest_task_model.get("error"),
         },
+        "latest_execution_lineage": None if latest_task_model is None else latest_task_model.get("execution_lineage"),
     }
 
 

@@ -9,6 +9,9 @@ from sqlalchemy.orm import Session
 from ..agents.agent_runtime import execute_agent
 from .retry_policy import ExecutionRetryPolicy
 from .task_models import ExecutionTask, ExecutionTaskStatus
+from ..models import CommandRun
+from ..services.execution_control import is_execution_allowed
+from ..services.policy_engine import evaluate_execution_policy, persist_policy_state
 from .task_queue import ExecutionTaskQueue, get_execution_task_queue
 from .task_store import ExecutionTaskStore, get_execution_task_store
 
@@ -133,6 +136,15 @@ class ExecutionScheduler:
         return retry_task_id[:64]
 
     def _process_loaded_task(self, session: Session, task: ExecutionTask, *, retry_on_failure: bool) -> ExecutionTask:
+        command_run = session.get(CommandRun, task.command_id) if task.command_id else None
+        decision = evaluate_execution_policy(command_run, task)
+        persist_policy_state(session, task.task_id, decision)
+        if not decision.allowed:
+            refreshed = self.store.get_task(session, task.task_id)
+            if refreshed is None:
+                raise ValueError(f"execution task not found: {task.task_id}")
+            return refreshed
+
         task = self.store.mark_running(session, task_id=task.task_id)
         _record_scheduler_event("task_started", task)
 
@@ -229,6 +241,12 @@ class ExecutionScheduler:
             return task
 
     def process_task(self, session: Session, *, task_id: str, retry_on_failure: bool = True) -> ExecutionTask:
+        allowed, _control_reason = is_execution_allowed(session, task_id)
+        if not allowed:
+            task = self.store.get_task(session, task_id)
+            if task is None:
+                raise ValueError(f"execution task not found: {task_id}")
+            return task
         ready_tasks = self.queue.pop_ready(session, limit=1, task_id=task_id)
         if not ready_tasks:
             task = self.store.get_task(session, task_id)

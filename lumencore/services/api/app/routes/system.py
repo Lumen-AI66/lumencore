@@ -21,6 +21,8 @@ from ..services.observability import (
     get_execution_gate_snapshot,
     get_execution_scheduler_metrics_snapshot,
     get_execution_scheduler_summary_snapshot,
+    get_execution_control_snapshot_view,
+    get_execution_policy_snapshot_view,
     get_execution_task_snapshot,
     get_job_status_counts,
     get_latest_agent_run_activity,
@@ -122,6 +124,8 @@ def execution_summary() -> dict:
         agent_runtime = get_agent_runtime_snapshot(session)
         agent_state = get_agent_state_snapshot(session)
         execution_tasks = get_execution_task_snapshot(session)
+        execution_control = get_execution_control_snapshot_view(session)
+        execution_policy = get_execution_policy_snapshot_view(session)
         planning = get_plan_snapshot(session)
         workflows = get_workflow_snapshot(session)
         workflow_failed_total = get_workflow_failed_total(session)
@@ -165,6 +169,8 @@ def execution_summary() -> dict:
         "agent_runtime": agent_runtime,
         "agent_state": agent_state,
         "execution_tasks": execution_tasks,
+        "execution_control": execution_control,
+        "execution_policy": execution_policy,
         "execution_scheduler": execution_scheduler,
         "planning": planning,
         "planning_events": {"event_counters": plan_runtime_metrics, "event_summary": plan_runtime},

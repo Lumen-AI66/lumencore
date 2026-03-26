@@ -53,3 +53,50 @@ tar -C /tmp -czf lumencore-api-recovery.tgz lumencore-api-recovery
 
 ## Recovery Gate
 Do not continue Phase 5 integration until the runtime files listed above exist locally and are verified.
+
+---
+
+## INCIDENT: NGINX 502 WITH HEALTHY BACKEND (PHASE 51)
+
+### Context
+- Repo: /opt/lumencore
+- Release: dbc5fc758532e9cd631c5b6ea5945ca1ebacc61a
+- Active nginx config: /opt/lumencore/vps/nginx/lumencore.conf
+- Upstreams via service DNS:
+  - lumencore-api:8000
+  - lumencore-dashboard:8080
+
+### Symptom
+- 502 Bad Gateway on root and/or /api
+- While API container may still appear healthy
+
+### Root Cause
+- Stale runtime / network-endpoint state between nginx proxy and upstream containers
+- NOT a config error
+- NOT a code defect
+
+### Verification (always first)
+curl -sS http://127.0.0.1/api/system/health
+curl -sS http://127.0.0.1/api/operator/summary
+curl -sS http://127.0.0.1/
+
+### Minimal Safe Fix
+Recreate ONLY affected runtime containers:
+
+- lumencore-proxy
+- lumencore-api (if involved)
+
+DO NOT restart unrelated services.
+
+### Explicitly Avoid
+- Full docker compose teardown
+- Rewriting nginx config without proof
+- Reopening completed phases
+- Assuming config mismatch without validation
+
+### Key Insight
+If health endpoints are OK but nginx returns 502,
+treat as runtime desynchronization first — not configuration failure.
+
+---
+

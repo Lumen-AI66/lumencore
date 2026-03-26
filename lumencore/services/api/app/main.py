@@ -11,6 +11,7 @@ from .routes.command_queue import router as command_queue_router
 from .routes.connectors import router as connectors_router
 from .routes.nodes import router as nodes_router
 from .routes.operator import router as operator_router
+from .routes.execution_control import router as execution_control_router
 from .routes.execution_tasks import router as execution_tasks_router
 from .routes.health import router as health_router
 from .routes.input import router as input_router
@@ -46,6 +47,7 @@ app.include_router(connectors_router)
 app.include_router(nodes_router)
 app.include_router(operator_router, prefix="/api/operator", tags=["operator"])
 app.include_router(execution_tasks_router)
+app.include_router(execution_control_router)
 app.include_router(plans_router)
 app.include_router(workflows_router)
 

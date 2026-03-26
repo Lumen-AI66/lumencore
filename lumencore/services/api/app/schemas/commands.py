@@ -39,6 +39,9 @@ class CommandRunResponse(BaseModel):
     requested_mode: str | None = None
     selected_agent_id: str | None = None
     status: str
+    execution_task_id: str | None = None
+    execution_task_status: str | None = None
+    result: str | None = None
     execution_decision: str
     approval_required: bool
     approval_status: str
@@ -54,6 +57,7 @@ class CommandRunResponse(BaseModel):
     correlation_id: str | None = None
     connector_name: str | None = None
     error_code: str | None = None
+    execution_lineage: dict[str, Any] | None = None
     result_summary: dict[str, Any] | None = None
     started_at: datetime | None = None
     finished_at: datetime | None = None

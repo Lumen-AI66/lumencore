@@ -74,6 +74,32 @@ def create_command_run(session: Session, *, tenant_id: str, command_text: str, n
     return run
 
 
+def _copy_result_summary(summary: dict | None) -> dict:
+    if not isinstance(summary, dict):
+        return {}
+    copied: dict = {}
+    for key, value in summary.items():
+        if isinstance(value, dict):
+            copied[key] = dict(value)
+        else:
+            copied[key] = value
+    return copied
+
+
+def _merge_result_summary(existing: dict | None, updates: dict | None) -> dict | None:
+    merged = _copy_result_summary(existing)
+    for key, value in _copy_result_summary(updates).items():
+        if value is None:
+            continue
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            nested = dict(merged[key])
+            nested.update(value)
+            merged[key] = nested
+        else:
+            merged[key] = value
+    return merged or None
+
+
 def update_command_run_for_job(session: Session, run: CommandRun) -> CommandRun:
     if not run.job_id:
         return run
@@ -84,26 +110,30 @@ def update_command_run_for_job(session: Session, run: CommandRun) -> CommandRun:
     run.started_at = run.started_at or job.started_at
     run.finished_at = job.finished_at or run.finished_at
     run.updated_at = datetime.now(timezone.utc)
+
+    summary_updates: dict | None = None
+    metadata_updates: dict = {
+        "job_status": run.status,
+        "job_id": job.id,
+    }
+
     if job.job_type == "workflow_task" and isinstance(job.result, dict):
         workflow_execution = job.result.get("workflow_execution") or {}
         if workflow_execution:
-            run.result_summary = _build_workflow_result_summary(workflow_execution)
-            run.result_summary["job_status"] = run.status
-            run.result_summary["job_id"] = job.id
-            if job.error:
-                run.result_summary["job_error"] = job.error
+            summary_updates = _build_workflow_result_summary(workflow_execution)
+        if job.error:
+            metadata_updates["job_error"] = job.error
     elif job.job_type == "operator_command" and isinstance(job.result, dict):
-        persisted_summary = dict(job.result.get("result_summary") or run.result_summary or {})
+        persisted_summary = dict(job.result.get("result_summary") or {})
         if persisted_summary:
-            run.result_summary = persisted_summary
-            run.result_summary["job_status"] = run.status
-            run.result_summary["job_id"] = job.id
-            if job.error:
-                run.result_summary["job_error"] = job.error
-    elif job.status == JobStatus.completed and run.result_summary is None:
-        run.result_summary = {"job_status": run.status}
+            summary_updates = persisted_summary
+        if job.error:
+            metadata_updates["job_error"] = job.error
     elif job.status == JobStatus.failed:
-        run.result_summary = {"job_status": run.status, "error": job.error}
+        summary_updates = {"error": job.error}
+
+    run.result_summary = _merge_result_summary(run.result_summary, summary_updates)
+    run.result_summary = _merge_result_summary(run.result_summary, metadata_updates)
     session.add(run)
     session.flush()
     return run
