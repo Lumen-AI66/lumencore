@@ -15,6 +15,7 @@ from .routes.operator import router as operator_router
 from .routes.execution_control import router as execution_control_router
 from .routes.execution_tasks import router as execution_tasks_router
 from .routes.health import router as health_router
+from .routes.recovery import router as recovery_router
 from .routes.input import router as input_router
 from .routes.jobs import router as jobs_router
 from .routes.plans import router as plans_router
@@ -26,6 +27,7 @@ from .tools.bootstrap import register_placeholder_tools
 
 
 app = FastAPI(title='Lumencore API', version='4.1.0')
+
 
 
 @app.on_event('startup')
@@ -44,6 +46,7 @@ def on_startup() -> None:
 
 
 app.include_router(health_router)
+app.include_router(recovery_router)
 app.include_router(input_router)
 app.include_router(system_router)
 app.include_router(jobs_router)

@@ -16,3 +16,7 @@ phase*.py
 # editor
 .vscode/
 .sync*
+
+# Recovery runtime artifacts
+deployment/recovery_events.json
+deployment/recovery_requests.json

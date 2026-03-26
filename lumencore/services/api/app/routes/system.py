@@ -12,8 +12,7 @@ from ..db import session_scope
 from ..models import Agent, CommandRun
 from ..security import internal_observability_boundary
 from ..services.deployment.deployment_service import get_deployment_state
-from ..services.observability import
-from ..services.recovery.recovery_service import get_recovery_status (
+from ..services.observability import (
     get_agent_run_counts,
     get_agent_runtime_snapshot,
     get_agent_state_snapshot,
@@ -43,6 +42,7 @@ from ..services.recovery.recovery_service import get_recovery_status (
     get_workflow_runtime_summary_snapshot,
     get_workflow_snapshot,
 )
+from ..services.recovery.recovery_service import get_recovery_status
 from ..services.runtime_health import get_runtime_health_snapshot
 
 router = APIRouter(prefix="/api/system", tags=["system"])

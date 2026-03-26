@@ -1,17 +1,15 @@
 from __future__ import annotations
-from datetime import datetime, timezone
 
-_recovery_state = {
-    "recoverable": True,
-    "last_recovery_attempt": None,
-}
+from .control import evaluate_recovery, get_recovery_summary
+
 
 def check_system_recoverable() -> dict:
-    return _recovery_state
+    return get_recovery_summary()
+
 
 def trigger_safe_recovery() -> dict:
-    _recovery_state["last_recovery_attempt"] = datetime.now(timezone.utc).isoformat()
-    return _recovery_state
+    return evaluate_recovery(execute=True, source='recovery_service')
+
 
 def get_recovery_status() -> dict:
-    return _recovery_state
+    return get_recovery_summary()
