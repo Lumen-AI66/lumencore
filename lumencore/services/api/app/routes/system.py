@@ -11,6 +11,7 @@ from ..config import settings
 from ..db import session_scope
 from ..models import Agent, CommandRun
 from ..security import internal_observability_boundary
+from ..services.deployment.deployment_service import get_deployment_state
 from ..services.observability import (
     get_agent_run_counts,
     get_agent_runtime_snapshot,
@@ -51,6 +52,7 @@ SYSTEM_START_TIME = time.monotonic()
 @router.get("/health")
 def system_health() -> dict:
     health = get_runtime_health_snapshot()
+    deployment = get_deployment_state()
     return {
         "status": health["status"],
         "service": "lumencore-api",
@@ -64,6 +66,11 @@ def system_health() -> dict:
             "redis": health["api"]["redis"],
             "worker": health["worker"],
             "scheduler": health["scheduler"],
+        },
+        "deployment": {
+            "last_restart_at": deployment.get("last_restart_at"),
+            "restart_count": int(deployment.get("restart_count", 0)),
+            "failed_restarts": int(deployment.get("failed_restarts", 0)),
         },
     }
 
@@ -109,6 +116,7 @@ def system_overview() -> dict:
 @router.get("/execution-summary", dependencies=[Depends(internal_observability_boundary)])
 def execution_summary() -> dict:
     health = get_runtime_health_snapshot()
+    deployment = get_deployment_state()
 
     with session_scope() as session:
         job_counts, total_jobs = get_job_status_counts(session)
@@ -149,6 +157,10 @@ def execution_summary() -> dict:
         "release": {
             "release_id": settings.release_id,
             "manifest_sha256": settings.release_manifest_sha256 or None,
+        },
+        "deployment": {
+            "last_deploy_at": deployment.get("last_deploy_at"),
+            "last_known_good_release": deployment.get("last_known_good_release"),
         },
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "health": {
