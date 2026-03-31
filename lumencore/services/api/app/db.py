@@ -275,11 +275,40 @@ def ensure_phase4_schema() -> None:
             conn.execute(text(stmt))
 
 
+def ensure_phase1_schema() -> None:
+    stmts = [
+        """
+        CREATE TABLE IF NOT EXISTS public.tasks (
+            id VARCHAR(36) PRIMARY KEY,
+            task_type VARCHAR(64) NOT NULL,
+            status VARCHAR(32) NOT NULL DEFAULT 'queued',
+            agent VARCHAR(128) NULL,
+            priority INTEGER NOT NULL DEFAULT 0,
+            payload JSONB NOT NULL DEFAULT '{}',
+            result JSONB NULL,
+            error TEXT NULL,
+            approval_required BOOLEAN NOT NULL DEFAULT FALSE,
+            approval_status VARCHAR(32) NOT NULL DEFAULT 'not_required',
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        """,
+        "CREATE INDEX IF NOT EXISTS ix_tasks_status ON public.tasks (status)",
+        "CREATE INDEX IF NOT EXISTS ix_tasks_task_type ON public.tasks (task_type)",
+        "ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS execution_task_id VARCHAR(36) NULL",
+        "CREATE INDEX IF NOT EXISTS ix_tasks_execution_task_id ON public.tasks (execution_task_id)",
+    ]
+    with engine.begin() as conn:
+        for stmt in stmts:
+            conn.execute(text(stmt))
+
+
 def init_db() -> None:
     from . import models  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
     ensure_phase4_schema()
+    ensure_phase1_schema()
 
 
 def check_db() -> dict:
