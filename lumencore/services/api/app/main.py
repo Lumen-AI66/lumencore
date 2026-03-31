@@ -20,6 +20,7 @@ from .routes.input import router as input_router
 from .routes.jobs import router as jobs_router
 from .routes.plans import router as plans_router
 from .routes.system import router as system_router
+from .routes.memory import router as memory_router
 from .routes.tasks import router as tasks_router
 from .routes.workflows import router as workflows_router
 from .services.deployment.deployment_service import get_deployment_state, mark_failed_restart, record_deploy, record_restart
@@ -63,6 +64,7 @@ app.include_router(execution_tasks_router)
 app.include_router(execution_control_router)
 app.include_router(plans_router)
 app.include_router(tasks_router)
+app.include_router(memory_router)
 app.include_router(workflows_router)
 
 

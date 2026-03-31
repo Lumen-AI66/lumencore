@@ -303,12 +303,62 @@ def ensure_phase1_schema() -> None:
             conn.execute(text(stmt))
 
 
+def ensure_phase2_schema() -> None:
+    stmts = [
+        """
+        CREATE TABLE IF NOT EXISTS public.memory_records (
+            id VARCHAR(36) PRIMARY KEY,
+            type VARCHAR(32) NOT NULL,
+            key VARCHAR(255) NOT NULL,
+            content TEXT NOT NULL,
+            metadata_json JSONB NULL,
+            source_task_id VARCHAR(36) NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        """,
+        "CREATE INDEX IF NOT EXISTS ix_memory_records_key ON public.memory_records (key)",
+        "CREATE INDEX IF NOT EXISTS ix_memory_records_type ON public.memory_records (type)",
+        "CREATE INDEX IF NOT EXISTS ix_memory_records_created_at ON public.memory_records (created_at DESC)",
+        "CREATE INDEX IF NOT EXISTS ix_memory_records_source_task_id ON public.memory_records (source_task_id)",
+        """
+        CREATE TABLE IF NOT EXISTS public.skill_memory (
+            id VARCHAR(36) PRIMARY KEY,
+            name VARCHAR(128) NOT NULL UNIQUE,
+            description TEXT NOT NULL DEFAULT '',
+            pattern JSONB NULL,
+            success_count INTEGER NOT NULL DEFAULT 0,
+            last_used_at TIMESTAMPTZ NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS public.decision_logs (
+            id VARCHAR(36) PRIMARY KEY,
+            task_id VARCHAR(36) NULL,
+            agent VARCHAR(128) NULL,
+            decision VARCHAR(255) NOT NULL,
+            reasoning TEXT NOT NULL DEFAULT '',
+            outcome VARCHAR(32) NOT NULL DEFAULT 'unknown',
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        """,
+        "CREATE INDEX IF NOT EXISTS ix_decision_logs_task_id ON public.decision_logs (task_id)",
+        "CREATE INDEX IF NOT EXISTS ix_decision_logs_outcome ON public.decision_logs (outcome)",
+        "CREATE INDEX IF NOT EXISTS ix_decision_logs_created_at ON public.decision_logs (created_at DESC)",
+    ]
+    with engine.begin() as conn:
+        for stmt in stmts:
+            conn.execute(text(stmt))
+
+
 def init_db() -> None:
     from . import models  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
     ensure_phase4_schema()
     ensure_phase1_schema()
+    ensure_phase2_schema()
 
 
 def check_db() -> dict:
