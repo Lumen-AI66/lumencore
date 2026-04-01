@@ -1,0 +1,205 @@
+# Lumencore — Traefik-compatible VPS deployment
+# Use this on Hostinger (or any host) where Traefik is pre-installed as the reverse proxy.
+# Traefik handles TLS + routing. No nginx container needed.
+#
+# Requirements on VPS before first run:
+#   - Traefik running and attached to a Docker network named: traefik (or update TRAEFIK_NETWORK below)
+#   - /opt/lumencore/.env populated from .env.example
+#   - LUMENCORE_DOMAIN set in .env to your real domain
+
+services:
+
+  lumencore-postgres:
+    image: postgres:16-alpine
+    container_name: lumencore-postgres
+    restart: unless-stopped
+    env_file:
+      - /opt/lumencore/.env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - lumencore-pgdata:/var/lib/postgresql/data
+    networks:
+      - lumencore-internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  lumencore-redis:
+    image: redis:7-alpine
+    container_name: lumencore-redis
+    restart: unless-stopped
+    command: >
+      sh -c 'if [ -n "$$REDIS_PASSWORD" ]; then
+               exec redis-server --requirepass "$$REDIS_PASSWORD";
+             else
+               exec redis-server;
+             fi'
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    volumes:
+      - lumencore-redisdata:/data
+    networks:
+      - lumencore-internal
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  lumencore-api:
+    build:
+      context: /opt/lumencore/lumencore/services/api
+      dockerfile: Dockerfile
+    image: lumencore-api:phase3
+    container_name: lumencore-api
+    restart: unless-stopped
+    user: "10001:10001"
+    env_file:
+      - /opt/lumencore/.env
+    environment:
+      APP_ENV: production
+      API_PORT: 8000
+      POSTGRES_HOST: lumencore-postgres
+      POSTGRES_PORT: 5432
+      REDIS_HOST: lumencore-redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      CELERY_BROKER_DB: 0
+      CELERY_RESULT_DB: 1
+      LUMENCORE_SYSTEM_PHASE: ${LUMENCORE_SYSTEM_PHASE:-3}
+      LUMENCORE_RELEASE_ID: ${LUMENCORE_RELEASE_ID:-phase3}
+      LUMENCORE_RELEASE_MANIFEST_SHA256: ${LUMENCORE_RELEASE_MANIFEST_SHA256:-unset}
+    expose:
+      - "8000"
+    depends_on:
+      lumencore-postgres:
+        condition: service_healthy
+      lumencore-redis:
+        condition: service_healthy
+    networks:
+      - lumencore-internal
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.lumencore-api.rule=Host(`${LUMENCORE_DOMAIN}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.lumencore-api.entrypoints=websecure"
+      - "traefik.http.routers.lumencore-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.lumencore-api.loadbalancer.server.port=8000"
+      - "traefik.docker.network=traefik"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).read()"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  lumencore-worker:
+    build:
+      context: /opt/lumencore/lumencore/services/api
+      dockerfile: Dockerfile
+    image: lumencore-api:phase3
+    container_name: lumencore-worker
+    restart: unless-stopped
+    user: "10001:10001"
+    command: ["sh", "-c", "exec celery -A app.worker_tasks worker --loglevel=INFO --pool=${CELERY_POOL:-solo} --concurrency=${CELERY_CONCURRENCY:-2}"]
+    env_file:
+      - /opt/lumencore/.env
+    environment:
+      APP_ENV: production
+      POSTGRES_HOST: lumencore-postgres
+      POSTGRES_PORT: 5432
+      REDIS_HOST: lumencore-redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      CELERY_BROKER_DB: 0
+      CELERY_RESULT_DB: 1
+      CELERY_POOL: ${CELERY_POOL:-solo}
+      CELERY_CONCURRENCY: ${CELERY_CONCURRENCY:-2}
+      LUMENCORE_SYSTEM_PHASE: ${LUMENCORE_SYSTEM_PHASE:-3}
+      LUMENCORE_RELEASE_ID: ${LUMENCORE_RELEASE_ID:-phase3}
+    depends_on:
+      lumencore-postgres:
+        condition: service_healthy
+      lumencore-redis:
+        condition: service_healthy
+    networks:
+      - lumencore-internal
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.worker_tasks inspect ping -d celery@$$HOSTNAME | grep -q pong"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  lumencore-scheduler:
+    build:
+      context: /opt/lumencore/lumencore/services/api
+      dockerfile: Dockerfile
+    image: lumencore-api:phase3
+    container_name: lumencore-scheduler
+    restart: unless-stopped
+    user: "10001:10001"
+    command: ["celery", "-A", "app.worker_tasks", "beat", "--loglevel=INFO"]
+    env_file:
+      - /opt/lumencore/.env
+    environment:
+      APP_ENV: production
+      POSTGRES_HOST: lumencore-postgres
+      POSTGRES_PORT: 5432
+      REDIS_HOST: lumencore-redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      CELERY_BROKER_DB: 0
+      CELERY_RESULT_DB: 1
+      LUMENCORE_SYSTEM_PHASE: ${LUMENCORE_SYSTEM_PHASE:-3}
+      LUMENCORE_RELEASE_ID: ${LUMENCORE_RELEASE_ID:-phase3}
+    depends_on:
+      lumencore-postgres:
+        condition: service_healthy
+      lumencore-redis:
+        condition: service_healthy
+    networks:
+      - lumencore-internal
+
+  lumencore-dashboard:
+    build:
+      context: /opt/lumencore/lumencore/deploy/dashboard
+      dockerfile: Dockerfile
+    image: lumencore-dashboard:phase3
+    container_name: lumencore-dashboard
+    restart: unless-stopped
+    expose:
+      - "8080"
+    networks:
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.lumencore-dashboard.rule=Host(`${LUMENCORE_DOMAIN}`)"
+      - "traefik.http.routers.lumencore-dashboard.entrypoints=websecure"
+      - "traefik.http.routers.lumencore-dashboard.tls.certresolver=letsencrypt"
+      - "traefik.http.services.lumencore-dashboard.loadbalancer.server.port=8080"
+      - "traefik.docker.network=traefik"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=3).read()"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  lumencore-pgdata:
+  lumencore-redisdata:
+
+networks:
+  lumencore-internal:
+    driver: bridge
+  traefik:
+    external: true
+    name: traefik
