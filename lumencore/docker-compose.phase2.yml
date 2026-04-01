@@ -203,6 +203,8 @@ volumes:
 
 networks:
   lumencore-internal:
+    external: true
     name: lumencore_lumencore-internal
   lumencore-public:
+    external: true
     name: lumencore_lumencore-public
