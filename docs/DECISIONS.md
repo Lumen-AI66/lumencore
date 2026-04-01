@@ -360,3 +360,23 @@ eady is now only possible when a registry entry has both an explicit built-in ru
 - Date: 2026-03-23
 - Decision: Treat the current operator live-readiness boundary as closed on the existing `/api/operator/*` read surfaces and the standalone proxied control-center surface, without adding new runtime architecture or UI scope.
 - Rationale: Phases 40-44 established coherent operator summary, recent-item, and queue truth directly against persisted lifecycle state on the VPS. The remaining gap was factual boundary visibility, not runtime behavior. Closing that boundary in status/decision records preserves the bounded live-v1 posture without reopening execution, lifecycle, or dashboard architecture.
+
+## D-059 Phase 1 Adds A Governed Task Control Layer Above The Existing Job System
+- Date: 2026-04-01
+- Decision: Add a `Task` model and `/api/tasks` surface as a first-class control layer above the existing `Job` and `ExecutionTaskRecord` systems, with a strict status machine (`queued → running → done/failed`, `needs_input → queued`) and an explicit approval gate for risky task types.
+- Rationale: The existing job system is tightly coupled to Celery and the worker path. A dedicated Task layer provides operator-visible task control, approval governance, and a stable integration seam for future execution and memory systems without modifying the proven job/worker infrastructure.
+
+## D-060 Phase 1.5 Bridges Task Control Layer To Existing Execution Infrastructure
+- Date: 2026-04-01
+- Decision: Connect Task lifecycle to the existing `ExecutionTaskStore` + `ExecutionScheduler` through a thin `task_dispatch.py` bridge that creates an `ExecutionTaskRecord`, runs the scheduler synchronously in the same session, and syncs the result back to the Task — without modifying any existing execution paths.
+- Rationale: Reusing the proven scheduler and store preserves all existing execution governance (policy, retry, audit) while giving the Task layer full execution lineage through `execution_task_id`. A synchronous dispatch keeps the integration simple and avoids introducing a second async dispatch mechanism.
+
+## D-061 Phase 2 Adds A Structured Queryable Memory System With Three Layers
+- Date: 2026-04-01
+- Decision: Implement memory as three explicit relational layers — `MemoryRecord` (fact/preference/context/system), `SkillMemory` (learned patterns with success tracking), and `DecisionLog` (reasoning trace per task) — backed by PostgreSQL with ILIKE keyword search. No embeddings or vector DB in this phase.
+- Rationale: Deterministic, structured memory with ILIKE search is sufficient for cross-task recall and decision auditing at the current system scale. Introducing embeddings or a vector database before operational need is justified would add infrastructure cost and complexity without a measurable gain. The three-layer model is designed to be extended with vector search later without a schema redesign.
+
+## D-062 Phase 3 Integrates Memory Into Agent Execution At Three Non-Breaking Seams
+- Date: 2026-04-01
+- Decision: Hook memory into `execute_agent()` at exactly three points — pre-execution retrieval injected into `task_payload["memory_context"]`, post-success `record_task_outcome()`, and post-failure `record_task_outcome()` — all wrapped in `try/except` so memory failure can never block agent execution or result delivery.
+- Rationale: Memory enrichment must not become a new failure mode for agent execution. Injecting context into `task_payload` is non-breaking because the agent loop and existing execution paths ignore unknown payload keys. Wrapping all memory calls in `try/except` enforces a strict boundary between the memory subsystem and the execution critical path.

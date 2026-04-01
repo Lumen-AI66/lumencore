@@ -1,7 +1,7 @@
 # LumenCore Workspace Agent Rules
 
 ## Project Scope
-- Workspace root: `C:\LUMENCORE_SYSTEM`
+- Workspace root: `C:\Users\klus_\lumencore`
 - In-scope components: `lumencore`, `openclaw`, `docker`, `vps`, `claude`, `scripts`, `docs`, and `codex`.
 - Target platform: VPS-hosted Lumencore system using Dockerized services, with OpenClaw orchestration and future Claude integration.
 

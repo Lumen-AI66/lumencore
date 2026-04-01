@@ -1229,3 +1229,127 @@ Features:
 - The operator read model is operationally ready for a bounded live-v1 usage phase.
 - Read-model truth is now coherent across summary, recent items, queue exposure, and operator attention.
 - No execution-flow, lifecycle, schema, connector, or UI redesign work was required for this boundary closeout.
+
+
+## Session Update - 2026-04-01 (Phase 1 Task Control Layer)
+### Files Changed
+- `lumencore/services/api/app/models.py`
+- `lumencore/services/api/app/db.py`
+- `lumencore/services/api/app/main.py`
+- `lumencore/services/api/app/schemas/tasks.py` (new)
+- `lumencore/services/api/app/services/tasks.py` (new)
+- `lumencore/services/api/app/routes/tasks.py` (new)
+
+### Completed
+- Added `TaskStatus` enum: `queued`, `running`, `needs_input`, `done`, `failed`.
+- Added `Task` SQLAlchemy model (`tasks` table) with fields: id, task_type, status, agent, priority, payload, result, error, approval_required, approval_status, execution_task_id, created_at, updated_at.
+- Added `ensure_phase1_schema()` to `db.py` with `CREATE TABLE IF NOT EXISTS` + indexes on status, task_type, execution_task_id. Called from `init_db()`.
+- Added Pydantic schemas: `TaskCreateRequest`, `TaskResponse`, `TaskListResponse`, `TaskApproveRequest`.
+- Added service layer: `create_task`, `get_task`, `list_tasks`, `approve_task`, `mark_task_running`, `mark_task_done`, `mark_task_failed`.
+- Added strict status machine in `services/tasks.py`: illegal transitions raise `ValueError`.
+- Added API endpoints:
+  - `POST /api/tasks` — create task; risky task_types (`deploy`, `delete`, `drop_table`, `reset`, `purge`, `shutdown`) auto-flagged for approval.
+  - `GET /api/tasks` — list tasks (paginated).
+  - `GET /api/tasks/{id}` — get single task.
+  - `POST /api/tasks/{id}/approve` — approval gate; approved tasks transition to `queued`, rejected tasks transition to `failed`.
+- Registered `tasks_router` in `main.py`.
+
+### Deferred
+- Background task polling
+- Task cancellation
+- Task retry on failure
+- Multi-tenant task isolation
+
+### Scope Guard
+- Phase 1 only. No execution integration yet. No changes to existing execution, scheduler, or worker paths.
+
+
+## Session Update - 2026-04-01 (Phase 1.5 Execution Integration)
+### Files Changed
+- `lumencore/services/api/app/models.py`
+- `lumencore/services/api/app/db.py`
+- `lumencore/services/api/app/services/tasks.py`
+- `lumencore/services/api/app/services/task_dispatch.py` (new)
+- `lumencore/services/api/app/routes/tasks.py`
+- `lumencore/services/api/app/schemas/tasks.py`
+
+### Completed
+- Added `execution_task_id` column to `tasks` table; migration added to `ensure_phase1_schema()`.
+- Added `task_dispatch.py` as integration bridge between Task control layer and existing `ExecutionTaskStore` + `ExecutionScheduler`.
+- `dispatch_task()` flow:
+  1. Creates `ExecutionTaskRecord` (pending) with `task_metadata["task_id"]` linking back to Phase-1 Task.
+  2. Calls `mark_task_running()` — transitions Task `queued → running`, stores `execution_task_id`.
+  3. Calls `scheduler.process_task()` synchronously — no new infrastructure.
+  4. Syncs result back: `ExecutionTaskStatus.completed → Task.done`, else `Task.failed`.
+- Routes auto-dispatch on `submit_task` (if status is `queued`) and on `approve_task_action` (after approval).
+- All three memory functions wrapped in `try/except` — dispatch failure is non-fatal to the API response shape.
+- Exposed `execution_task_id` in `TaskResponse`.
+
+### Deferred
+- Async/background dispatch
+- Retry-on-failure for task dispatch
+- Worker-pool integration
+
+### Scope Guard
+- No changes to `ExecutionTaskStore`, `ExecutionScheduler`, `worker_tasks.py`, or any existing execution path. Purely additive.
+
+
+## Session Update - 2026-04-01 (Phase 2 Memory System)
+### Files Changed
+- `lumencore/services/api/app/models.py`
+- `lumencore/services/api/app/db.py`
+- `lumencore/services/api/app/main.py`
+- `lumencore/services/api/app/schemas/memory.py` (new)
+- `lumencore/services/api/app/services/memory.py` (new)
+- `lumencore/services/api/app/routes/memory.py` (new)
+- `lumencore/services/api/app/services/task_dispatch.py`
+
+### Completed
+- Added three SQLAlchemy models:
+  - `MemoryRecord` (`memory_records` table): id, type (fact/preference/context/system), key, content, metadata_json, source_task_id, created_at, updated_at.
+  - `SkillMemory` (`skill_memory` table): id, name (unique), description, pattern (JSONB), success_count, last_used_at, created_at.
+  - `DecisionLog` (`decision_logs` table): id, task_id, agent, decision, reasoning, outcome (success/failure/unknown), created_at.
+- Added `ensure_phase2_schema()` to `db.py` with `CREATE TABLE IF NOT EXISTS` + indexes for all three tables. Called from `init_db()`.
+- Added `services/memory.py`:
+  - `store_memory()` — write a memory record.
+  - `search_memory()` — ILIKE keyword search + type filter (no embeddings).
+  - `retrieve_relevant_memory()` — keyword-match from task context; returns empty list on error (non-breaking).
+  - `store_skill_memory()` — upsert on name (increments success_count).
+  - `store_decision_log()` — append-only decision trace.
+  - `record_task_outcome()` — called post-task: writes DecisionLog + fact MemoryRecord (success) or context MemoryRecord (failure).
+- Added API endpoints:
+  - `POST /api/memory` — store memory manually.
+  - `GET /api/memory?query=X&type=fact` — keyword search with optional type filter.
+  - `GET /api/memory/skills` — list skill memory ordered by success_count.
+  - `GET /api/memory/decisions?task_id=X` — decision log, filterable by task_id.
+- Wired pre-execution retrieval hook and post-execution `_record_outcome()` into `task_dispatch.py`. Both wrapped in `try/except` — memory failure never blocks execution.
+
+### Deferred
+- Embeddings and vector search
+- Automatic skill extraction
+- Memory expiration / TTL
+- Multi-tenant memory isolation
+
+### Scope Guard
+- No changes to execution, scheduler, worker, or agent runtime paths. Purely additive.
+
+
+## Session Update - 2026-04-01 (Phase 3 Agent Memory Integration)
+### Files Changed
+- `lumencore/services/api/app/agents/agent_runtime.py`
+
+### Completed
+- Integrated Phase 2 memory system into `execute_agent()` with three targeted changes:
+  1. **Pre-execution**: `retrieve_relevant_memory(session, task_context, limit=5)` called after `task_payload` is built; result injected as `task_payload["memory_context"]` before policy check. Non-breaking — agents and execution paths ignore unknown payload keys.
+  2. **Post-execution success**: `record_task_outcome(outcome="success", result=result_payload)` called before return in the success path.
+  3. **Post-execution failure**: `record_task_outcome(outcome="failure", error=error_message)` called before return in the `except` block.
+- All three hooks wrapped in `try/except` — memory failure never blocks agent execution or result delivery.
+- `execute_agent_task()` (legacy `agent.ping` / `agent.echo` path) not modified.
+
+### Deferred
+- Memory-informed agent planning
+- Skill memory auto-extraction from agent runs
+- Cross-agent shared memory reads
+
+### Scope Guard
+- One file changed. No changes to agent loop, policy, router, registry, state store, scheduler, or any other execution path.
