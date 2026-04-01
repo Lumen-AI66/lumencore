@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from ..models import AgentRun, AgentRunStatus
 from ..policy_engine.audit_logger import write_audit_event, write_tool_audit_event
+from ..services.memory import record_task_outcome, retrieve_relevant_memory
 from ..sandbox.sandbox_executor import SandboxExecutor, allow_governed_network_calls
 from ..secrets.secret_manager import SecretManager
 from ..tools import ToolRequest, create_tool_mediation_service
@@ -98,6 +99,20 @@ def execute_agent(
             "resolved_agent_id": registry_definition.agent_id,
         }
     )
+
+    # Phase 2 — pre-execution memory retrieval (non-breaking)
+    try:
+        _mem_context = retrieve_relevant_memory(
+            session,
+            {"task_type": registry_definition.agent_type, "payload": task_payload},
+            limit=5,
+        )
+        task_payload["memory_context"] = [
+            {"key": m.key, "type": m.type, "content": m.content[:500]}
+            for m in _mem_context
+        ]
+    except Exception:
+        pass  # memory retrieval failure must not block execution
 
     agent_record, policy = resolve_agent_for_task(
         session,
@@ -395,6 +410,21 @@ def execute_agent(
             },
         )
 
+        # Phase 2 — post-execution memory (non-breaking)
+        try:
+            _outcome = "success" if loop_result.status == "completed" else "failure"
+            record_task_outcome(
+                session,
+                task_id=task_id,
+                task_type=registry_definition.agent_type,
+                agent=deterministic_agent.name,
+                result=result_payload,
+                error=None,
+                outcome=_outcome,
+            )
+        except Exception:
+            pass
+
         return {
             "tenant_id": run.tenant_id,
             "agent_id": str(agent_record.id),
@@ -485,6 +515,20 @@ def execute_agent(
                 "status": status,
             },
         )
+        # Phase 2 — post-execution memory on failure (non-breaking)
+        try:
+            record_task_outcome(
+                session,
+                task_id=task_id,
+                task_type=registry_definition.agent_type,
+                agent=deterministic_agent.name,
+                result=None,
+                error=error_message,
+                outcome="failure",
+            )
+        except Exception:
+            pass
+
         return {
             "tenant_id": run.tenant_id,
             "agent_id": str(agent_record.id),
