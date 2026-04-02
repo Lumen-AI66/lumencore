@@ -14,7 +14,7 @@ from ...execution import ExecutionTaskStatus, get_execution_task_store
 from ..runtime_health import check_worker
 from .actions import get_recovery_request, list_recovery_requests, run_recovery_action
 
-_EVENTS_PATH = Path('/opt/lumencore/deployment/recovery_events.json')
+_EVENTS_PATH = Path(os.environ.get("LUMENCORE_DEPLOYMENT_PATH", "/opt/lumencore/deployment")) / "recovery_events.json"
 _EVENT_LIMIT = 200
 _SUPPRESS_THRESHOLD = 3
 _SUPPRESS_WINDOW = timedelta(minutes=15)

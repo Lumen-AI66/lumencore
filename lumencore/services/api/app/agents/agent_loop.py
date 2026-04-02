@@ -28,11 +28,11 @@ class AgentLoopResult:
 
 def _derive_status(results: list[ToolResult]) -> str:
     statuses = [result.status for result in results]
-    if any(status is ToolResultStatus.timeout for status in statuses):
+    if any(status == ToolResultStatus.timeout for status in statuses):
         return "timeout"
-    if any(status is ToolResultStatus.failed for status in statuses):
+    if any(status == ToolResultStatus.failed for status in statuses):
         return "failed"
-    if any(status is ToolResultStatus.denied for status in statuses):
+    if any(status == ToolResultStatus.denied for status in statuses):
         return "denied"
     return "completed"
 

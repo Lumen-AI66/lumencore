@@ -16,7 +16,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r /app/requirements.txt
 
 COPY app /app/app
-RUN chown -R app:app /app
+RUN chown -R app:app /app && \
+    mkdir -p /opt/lumencore/deployment && \
+    chown -R app:app /opt/lumencore
 
 USER app:app
 

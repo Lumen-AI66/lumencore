@@ -21,3 +21,6 @@ phase*.py
 # Recovery runtime artifacts
 deployment/recovery_events.json
 deployment/recovery_requests.json
+
+# Local dev stub (mirrors VPS /opt/lumencore path for docker-compose on Windows)
+lumencore/opt/

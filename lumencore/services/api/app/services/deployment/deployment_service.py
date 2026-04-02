@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-_STATE_PATH = Path("/opt/lumencore/deployment/deployment_state.json")
+_STATE_PATH = Path(os.environ.get("LUMENCORE_DEPLOYMENT_PATH", "/opt/lumencore/deployment")) / "deployment_state.json"
 _UNSET = object()
 _DEFAULT_STATE = {
     "last_restart_at": None,

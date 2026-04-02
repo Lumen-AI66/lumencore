@@ -13,7 +13,7 @@ from ..execution_control import ExecutionControlStatus, set_execution_control_st
 
 task_store = get_execution_task_store()
 
-_REQUESTS_PATH = Path('/opt/lumencore/deployment/recovery_requests.json')
+_REQUESTS_PATH = Path(os.environ.get("LUMENCORE_DEPLOYMENT_PATH", "/opt/lumencore/deployment")) / "recovery_requests.json"
 _REQUEST_LIMIT = 200
 _ALLOWED_INFRA_ACTIONS = {
     'reload_nginx',
