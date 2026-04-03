@@ -23,6 +23,8 @@ from .routes.system import router as system_router
 from .routes.memory import router as memory_router
 from .routes.tasks import router as tasks_router
 from .routes.workflows import router as workflows_router
+from .routes.credentials import router as credentials_router
+from .routes.workspaces import router as workspaces_router
 from .services.deployment.deployment_service import get_deployment_state, mark_failed_restart, record_deploy, record_restart
 from .services.runtime_health import get_runtime_health_snapshot
 from .tools.bootstrap import register_placeholder_tools
@@ -66,6 +68,8 @@ app.include_router(plans_router)
 app.include_router(tasks_router)
 app.include_router(memory_router)
 app.include_router(workflows_router)
+app.include_router(credentials_router)
+app.include_router(workspaces_router)
 
 
 

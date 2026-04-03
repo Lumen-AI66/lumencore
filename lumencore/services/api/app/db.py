@@ -268,6 +268,50 @@ def ensure_phase4_schema() -> None:
         "ALTER TABLE public.workflow_runs ADD COLUMN IF NOT EXISTS started_at TIMESTAMPTZ NULL",
         "ALTER TABLE public.workflow_runs ADD COLUMN IF NOT EXISTS finished_at TIMESTAMPTZ NULL",
         "CREATE INDEX IF NOT EXISTS idx_workflow_runs_command_id ON public.workflow_runs (command_id)",
+        """
+        CREATE TABLE IF NOT EXISTS public.credential_vault (
+            id VARCHAR(36) PRIMARY KEY,
+            tenant_id VARCHAR(64) NOT NULL DEFAULT 'owner',
+            name VARCHAR(255) NOT NULL,
+            service VARCHAR(128) NOT NULL,
+            credential_type VARCHAR(64) NOT NULL,
+            value_encrypted TEXT NOT NULL,
+            metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+        """,
+        "CREATE INDEX IF NOT EXISTS idx_credential_vault_tenant ON public.credential_vault (tenant_id)",
+        "CREATE INDEX IF NOT EXISTS idx_credential_vault_service ON public.credential_vault (service)",
+        """
+        CREATE TABLE IF NOT EXISTS public.workspaces (
+            id VARCHAR(36) PRIMARY KEY,
+            tenant_id VARCHAR(64) NOT NULL DEFAULT 'owner',
+            name VARCHAR(255) NOT NULL,
+            description TEXT NULL,
+            status VARCHAR(32) NOT NULL DEFAULT 'active',
+            config_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+        """,
+        "CREATE INDEX IF NOT EXISTS idx_workspaces_tenant ON public.workspaces (tenant_id)",
+        """
+        CREATE TABLE IF NOT EXISTS public.workspace_workflows (
+            id VARCHAR(36) PRIMARY KEY,
+            workspace_id VARCHAR(36) NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+            tenant_id VARCHAR(64) NOT NULL DEFAULT 'owner',
+            name VARCHAR(255) NOT NULL,
+            trigger_type VARCHAR(64) NOT NULL DEFAULT 'manual',
+            trigger_config JSONB NOT NULL DEFAULT '{}'::jsonb,
+            steps_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+            status VARCHAR(32) NOT NULL DEFAULT 'active',
+            last_run_at TIMESTAMPTZ NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+        """,
+        "CREATE INDEX IF NOT EXISTS idx_workspace_workflows_workspace ON public.workspace_workflows (workspace_id)",
     ]
 
     with engine.begin() as conn:
