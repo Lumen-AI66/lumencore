@@ -631,16 +631,23 @@ async function loadDashboard() {
     // Agent count from agent_runs
     document.getElementById('agents-active-val').textContent = agentRuns.total || '—';
 
-    // Activity feed from recent_commands in summary
+    // Activity feed from recent_commands in summary — clickable to see answer
     const recent = summary.recent_commands || [];
     document.getElementById('cmd-total-val').textContent = (summary.commands?.counts_by_status?.completed || recent.length) + '';
     const feedEl = document.getElementById('activity-feed');
     if (recent.length) {
-      feedEl.innerHTML = recent.slice(0, 8).map(c => `
-        <div class="activity-item">
-          <span class="activity-time">${fmtTime(c.timestamp||c.created_at).split(',').pop()||''}</span>
-          <span class="activity-text">${(c.command_text||'—').slice(0,50)} ${statusBadge(c.status)}</span>
-        </div>`).join('');
+      feedEl.innerHTML = recent.slice(0, 8).map(c => {
+        const answer = c.result?.agent_result?.output_text;
+        const preview = answer ? answer.slice(0,80) + (answer.length > 80 ? '…' : '') : null;
+        return `<div class="activity-item" style="flex-direction:column;gap:4px;cursor:pointer" onclick="showCmdDetail('${c.command_id||c.id}')">
+          <div style="display:flex;gap:10px;align-items:center">
+            <span class="activity-time">${fmtTime(c.timestamp||c.created_at).split(',').pop()||''}</span>
+            <span style="font-weight:500;flex:1">${(c.command_text||'—').slice(0,50)}</span>
+            ${statusBadge(c.status)}
+          </div>
+          ${preview ? `<div style="font-size:12px;color:var(--cyan);padding-left:2px;line-height:1.4">"${preview}"</div>` : ''}
+        </div>`;
+      }).join('');
     } else {
       feedEl.innerHTML = '<div class="loading">No recent activity</div>';
     }
@@ -733,17 +740,50 @@ async function showCmdDetail(id) {
   openModal('cmd-detail-modal');
 }
 
-// QUICK COMMAND
+// QUICK COMMAND — sends command and polls until we have the answer
 async function sendQuickCmd() {
   const txt = document.getElementById('quick-cmd').value.trim();
   if (!txt) return;
   const el = document.getElementById('quick-cmd-result');
-  el.textContent = 'Sending…';
-  const r = await api('/api/input/command', { method:'POST', body:JSON.stringify({input_text:txt}) });
+  el.innerHTML = '<span style="color:var(--muted)">⏳ Sending to agent…</span>';
   document.getElementById('quick-cmd').value = '';
-  el.innerHTML = r
-    ? `✓ Sent — ID: <span class="mono">${r.command_id||r.id||'?'}</span> ${statusBadge(r.status)}`
-    : '✗ Failed to send command';
+
+  const r = await api('/api/input/command', { method:'POST', body:JSON.stringify({input_text:txt}) });
+  if (!r) { el.textContent = '✗ Failed to send command'; return; }
+
+  const cmdId = r.command_id || r.id;
+  if (!cmdId) { el.innerHTML = `✓ Sent ${statusBadge(r.status)}`; return; }
+
+  el.innerHTML = '<span style="color:var(--muted)">⏳ Agent is thinking…</span>';
+
+  // Poll every 1.5s for up to 60s
+  for (let i = 0; i < 40; i++) {
+    await new Promise(res => setTimeout(res, 1500));
+    const d = await api(`/api/operator/command/${cmdId}`);
+    if (!d) continue;
+    const done = ['completed','failed','cancelled','denied'].includes(d.status);
+    if (done) {
+      const result = d.result || d.result_summary;
+      const agentResult = result?.agent_result;
+      const outputText = agentResult?.output_text;
+      if (outputText) {
+        el.innerHTML = `
+          <div style="border-left:3px solid var(--cyan);padding-left:14px;margin-top:4px">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:6px">
+              🤖 ${d.planned_task_type||'agent'} · ${agentResult.model||''} · ${agentResult.tokens_used||0} tokens
+            </div>
+            <div style="font-size:14px;line-height:1.65;color:var(--text);white-space:pre-wrap">${outputText}</div>
+          </div>`;
+      } else if (d.status === 'failed') {
+        el.innerHTML = `<span style="color:var(--red)">✗ Agent failed: ${result?.error || 'unknown error'}</span>`;
+      } else {
+        el.innerHTML = `✓ Done ${statusBadge(d.status)}`;
+      }
+      loadDashboard();
+      return;
+    }
+  }
+  el.innerHTML = '<span style="color:var(--yellow)">⏱ Timeout — check Commands tab for result</span>';
 }
 
 // WORKSPACES
