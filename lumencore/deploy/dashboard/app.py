@@ -605,47 +605,55 @@ function fmtTime(ts) {
 async function loadDashboard() {
   const summary = await api('/api/operator/summary');
   if (summary) {
-    const h = summary.health || {};
-    const s = h.status || 'unknown';
+    // API returns system_health (string), not health.status
+    const s = summary.system_health || 'unknown';
     document.getElementById('sys-health-val').innerHTML = s === 'ok'
       ? '<span class="glow-text">OK</span>' : `<span style="color:var(--red)">${s.toUpperCase()}</span>`;
     document.getElementById('queue-size-val').textContent = summary.queue_size ?? '—';
     document.getElementById('sys-status-text').textContent = s === 'ok' ? 'ONLINE' : 'DEGRADED';
 
-    const comps = h.components || {};
+    // Build health display from counts object
     const healthEl = document.getElementById('health-list');
-    if (Object.keys(comps).length) {
-      healthEl.innerHTML = Object.entries(comps).map(([k, v]) => {
-        const ok = v === 'ok' || v === true || (typeof v === 'object' && v.ok);
-        return `<div class="health-item"><div><div class="health-name">${k}</div></div>${ok ? '<span class="badge badge-green">OK</span>' : '<span class="badge badge-red">ERR</span>'}</div>`;
-      }).join('');
-    } else {
-      healthEl.innerHTML = '<div class="health-item"><div class="health-name">API</div><span class="badge badge-green">OK</span></div>';
-    }
-
-    const agentList = summary.agents || [];
-    document.getElementById('agents-active-val').textContent = agentList.length || '—';
-  }
-
-  const cmds = await api('/api/operator/commands?limit=6');
-  const feedEl = document.getElementById('activity-feed');
-  if (cmds && cmds.length) {
-    document.getElementById('cmd-total-val').textContent = cmds.length + (cmds.length >= 6 ? '+' : '');
-    feedEl.innerHTML = cmds.map(c => `
-      <div class="activity-item">
-        <span class="activity-time">${fmtTime(c.created_at).split(',').pop() || ''}</span>
-        <span class="activity-text">${(c.command_text||'—').slice(0,50)} ${statusBadge(c.status)}</span>
+    const counts = summary.counts || {};
+    const agentRuns = summary.agent_runs || {};
+    const components = [
+      { name: 'API',        ok: s === 'ok' },
+      { name: 'Queue',      ok: true, detail: `${counts.queued||0} queued` },
+      { name: 'Agent Runs', ok: true, detail: `${agentRuns.total||0} total` },
+      { name: 'Workers',    ok: (counts.failed||0) === 0 },
+    ];
+    healthEl.innerHTML = components.map(c => `
+      <div class="health-item">
+        <div><div class="health-name">${c.name}</div>${c.detail ? `<div style="font-size:11px;color:var(--muted)">${c.detail}</div>` : ''}</div>
+        ${c.ok ? '<span class="badge badge-green">OK</span>' : '<span class="badge badge-red">ERR</span>'}
       </div>`).join('');
-  } else {
-    feedEl.innerHTML = '<div class="loading">No recent activity</div>';
+
+    // Agent count from agent_runs
+    document.getElementById('agents-active-val').textContent = agentRuns.total || '—';
+
+    // Activity feed from recent_commands in summary
+    const recent = summary.recent_commands || [];
+    document.getElementById('cmd-total-val').textContent = (summary.commands?.counts_by_status?.completed || recent.length) + '';
+    const feedEl = document.getElementById('activity-feed');
+    if (recent.length) {
+      feedEl.innerHTML = recent.slice(0, 8).map(c => `
+        <div class="activity-item">
+          <span class="activity-time">${fmtTime(c.timestamp||c.created_at).split(',').pop()||''}</span>
+          <span class="activity-text">${(c.command_text||'—').slice(0,50)} ${statusBadge(c.status)}</span>
+        </div>`).join('');
+    } else {
+      feedEl.innerHTML = '<div class="loading">No recent activity</div>';
+    }
   }
 }
 
 // AGENTS
 async function loadAgents() {
-  const data = await api('/api/agents/registry');
+  const resp = await api('/api/agents/registry');
+  // Registry returns {total, items:[...]} not a plain array
+  const data = (resp && resp.items) ? resp.items : (Array.isArray(resp) ? resp : []);
   const el = document.getElementById('agent-cards');
-  if (!data || !data.length) { el.innerHTML = '<div class="loading">No agents registered</div>'; return; }
+  if (!data.length) { el.innerHTML = '<div class="loading">No agents registered</div>'; return; }
   el.innerHTML = data.map(a => {
     const meta = a.metadata_json || {};
     const caps = (meta.capabilities || []).slice(0,3).join(' · ');
@@ -661,8 +669,9 @@ async function loadAgents() {
 // COMMANDS
 async function loadCommands() {
   const queue = await api('/api/operator/queue');
-  const awaiting = queue?.awaiting_approval || [];
-  const running = queue?.running || [];
+  // API returns queued_commands and running_commands (not awaiting_approval/running)
+  const awaiting = queue?.queued_commands || queue?.awaiting_approval || [];
+  const running = queue?.running_commands || queue?.running || [];
 
   document.getElementById('approval-list').innerHTML = awaiting.length
     ? awaiting.map(c => `<div class="activity-item">
@@ -681,21 +690,25 @@ async function loadCommands() {
       </div>`).join('')
     : '<div class="loading">Nothing running</div>';
 
-  const history = await api('/api/operator/commands?limit=25');
+  const histResp = await api('/api/operator/commands?limit=25');
+  // Returns {limit, items:[...]} — each item uses command_id not id
+  const history = (histResp && histResp.items) ? histResp.items : (Array.isArray(histResp) ? histResp : []);
   const tbody = document.getElementById('cmd-history-body');
-  if (!history || !history.length) { tbody.innerHTML = '<tr><td colspan="5" class="loading">No commands yet</td></tr>'; return; }
-  tbody.innerHTML = history.map(c => `
-    <tr>
+  if (!history.length) { tbody.innerHTML = '<tr><td colspan="5" class="loading">No commands yet</td></tr>'; return; }
+  tbody.innerHTML = history.map(c => {
+    const cid = c.command_id || c.id;
+    return `<tr>
       <td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.command_text||'—'}</td>
-      <td><span class="badge badge-purple">${c.intent||'—'}</span></td>
+      <td><span class="badge badge-purple">${c.intent||c.planned_task_type||'—'}</span></td>
       <td>${statusBadge(c.status)}</td>
-      <td class="mono">${fmtTime(c.created_at)}</td>
+      <td class="mono">${fmtTime(c.timestamp||c.created_at)}</td>
       <td>
-        <button class="btn btn-ghost btn-sm" onclick="showCmdDetail('${c.id}')">Detail</button>
-        ${c.status==='awaiting_approval'?`<button class="btn btn-ghost btn-sm" onclick="approveCmd('${c.id}')">Approve</button>`:''}
-        ${c.status==='failed'?`<button class="btn btn-ghost btn-sm" onclick="retryCmd('${c.id}')">Retry</button>`:''}
+        <button class="btn btn-ghost btn-sm" onclick="showCmdDetail('${cid}')">Detail</button>
+        ${c.status==='awaiting_approval'?`<button class="btn btn-ghost btn-sm" onclick="approveCmd('${cid}')">Approve</button>`:''}
+        ${c.status==='failed'?`<button class="btn btn-ghost btn-sm" onclick="retryCmd('${cid}')">Retry</button>`:''}
       </td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 }
 
 async function approveCmd(id) { await api(`/api/command/${id}/approve`,{method:'POST'}); toast('Command approved'); loadCommands(); }
@@ -705,14 +718,17 @@ async function retryCmd(id)   { await api(`/api/command/${id}/retry`,  {method:'
 async function showCmdDetail(id) {
   const d = await api(`/api/operator/command/${id}`);
   if (!d) return;
+  const result = d.result || d.result_summary;
+  const agentResult = result?.agent_result;
   document.getElementById('cmd-detail-body').innerHTML = `
-    <div class="form-group"><strong>ID:</strong> <span class="mono">${d.id}</span></div>
+    <div class="form-group"><strong>ID:</strong> <span class="mono">${d.command_id||d.id}</span></div>
     <div class="form-group"><strong>Command:</strong> ${d.command_text}</div>
-    <div class="form-group"><strong>Intent:</strong> ${d.intent}</div>
+    <div class="form-group"><strong>Type:</strong> ${d.planned_task_type||d.intent||'—'}</div>
     <div class="form-group"><strong>Status:</strong> ${statusBadge(d.status)}</div>
     <div class="form-group"><strong>Decision:</strong> ${d.execution_decision||'—'}</div>
-    <div class="form-group"><strong>Created:</strong> ${fmtTime(d.created_at)}</div>
-    ${d.result_summary?`<div class="form-group"><strong>Result:</strong><pre style="background:var(--bg3);padding:10px;border-radius:6px;font-size:11px;overflow:auto;max-height:120px">${JSON.stringify(d.result_summary,null,2)}</pre></div>`:''}
+    <div class="form-group"><strong>Time:</strong> ${fmtTime(d.timestamp||d.created_at)}</div>
+    ${agentResult ? `<div class="form-group"><strong>Agent output:</strong><div style="background:var(--bg3);padding:10px;border-radius:6px;font-size:12px;margin-top:6px;max-height:150px;overflow:auto;white-space:pre-wrap">${agentResult.output_text||''}</div><div style="font-size:11px;color:var(--muted);margin-top:4px">Model: ${agentResult.model||'—'} · Tokens: ${agentResult.tokens_used||0}</div></div>` : ''}
+    ${result && !agentResult ? `<div class="form-group"><strong>Result:</strong><pre style="background:var(--bg3);padding:10px;border-radius:6px;font-size:11px;overflow:auto;max-height:120px">${JSON.stringify(result,null,2)}</pre></div>` : ''}
   `;
   openModal('cmd-detail-modal');
 }
@@ -919,9 +935,8 @@ class Handler(BaseHTTPRequestHandler):
         port = parsed.port or (443 if parsed.scheme == "https" else 80)
         https = parsed.scheme == "https"
 
+        # path already contains query string (extracted from self.path[7:])
         full_path = "/" + path
-        if "?" in self.path:
-            full_path += "?" + self.path.split("?", 1)[1]
 
         try:
             conn = (
