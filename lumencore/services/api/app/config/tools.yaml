@@ -3,16 +3,24 @@ TOOL_ENABLEMENT:
   system.health_read: false
   search.web_search: true
   tool.openai.complete: true
+  tool.claude.complete: true
 AGENT_TOOL_PERMISSIONS:
   command-system:
     - system.echo
     - search.web_search
+  # research-agent
   22222222-2222-4222-8222-222222222222:
     - system.echo
     - tool.openai.complete
+  # automation-agent
   33333333-3333-4333-8333-333333333333:
     - system.echo
+  # analysis-agent
   44444444-4444-4444-8444-444444444444:
     - system.echo
     - tool.openai.complete
+  # openclaw — primary executor via Telegram
+  55555555-5555-4555-8555-555555555555:
+    - tool.claude.complete
+    - system.echo
 
