@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..models import Agent, AgentCapability, AgentPolicy
-from .agent_types import AnalysisAgent, AutomationAgent, BaseAgent, ResearchAgent
+from .agent_types import AnalysisAgent, AutomationAgent, BaseAgent, OpenclawAgent, ResearchAgent
 
 DEFAULT_AGENT_ID = "11111111-1111-4111-8111-111111111111"
 
@@ -46,6 +46,7 @@ _AGENT_INSTANCES: tuple[BaseAgent, ...] = (
     ResearchAgent(),
     AutomationAgent(),
     AnalysisAgent(),
+    OpenclawAgent(),
 )
 
 AGENT_REGISTRY: dict[str, BaseAgent] = {agent.agent_type: agent for agent in _AGENT_INSTANCES}
@@ -103,6 +104,24 @@ BUILTIN_AGENT_DEFINITIONS: tuple[AgentDefinition, ...] = (
         runtime_binding=AnalysisAgent.agent_type,
         task_types=("agent_task",),
     ),
+    AgentDefinition(
+        agent_key="openclaw.default",
+        agent_id=OpenclawAgent.agent_id,
+        agent_type=OpenclawAgent.agent_type,
+        name=OpenclawAgent.name,
+        description=OpenclawAgent.description,
+        version="1",
+        capabilities=(
+            RegistryCapability("execution", "Execution", "Executes operator commands via Claude AI."),
+            RegistryCapability("tool_use", "Tool Use", "Uses governed Claude tool during execution."),
+            RegistryCapability("sync_response", "Synchronous Response", "Completes bounded runs inline."),
+            RegistryCapability("registry_visible", "Registry Visible", "Exposed through the agent registry surface."),
+            RegistryCapability("telegram", "Telegram", "Handles commands from the Telegram operator interface."),
+        ),
+        metadata={"tools": list(OpenclawAgent.tools), "task_types": ["agent_task"], "source": "telegram"},
+        runtime_binding=OpenclawAgent.agent_type,
+        task_types=("agent_task",),
+    ),
 )
 
 AGENT_DEFINITIONS_BY_KEY: dict[str, AgentDefinition] = {
@@ -117,6 +136,21 @@ AGENT_KEYS_BY_ID: dict[str, str] = {
 REGISTRY_BACKED_AGENT_IDS: frozenset[str] = frozenset(AGENT_KEYS_BY_ID.keys())
 
 DEFAULT_AGENTS = [
+    {
+        "id": OpenclawAgent.agent_id,
+        "name": OpenclawAgent.name,
+        "description": OpenclawAgent.description,
+        "agent_type": OpenclawAgent.agent_type,
+        "status": "active",
+        "capabilities": ["agent_task"],
+        "policy": {
+            "execution_allowed": True,
+            "max_runtime_seconds": 60,
+            "allowed_task_types": ["agent_task"],
+            "owner_only_execution": True,
+            "future_budget_limit": 0.10,
+        },
+    },
     {
         "id": DEFAULT_AGENT_ID,
         "name": "core-agent-runner",

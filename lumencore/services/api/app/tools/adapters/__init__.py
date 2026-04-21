@@ -1,4 +1,5 @@
 from .base import ToolAdapter
+from .claude_adapter import ClaudeToolAdapter
 from .openai_adapter import OpenAIToolAdapter
 from .search_adapter import SearchToolAdapter
 from .system_adapter import SystemToolAdapter
@@ -8,6 +9,7 @@ from ..models import ToolDefinition
 _DEFAULT_ADAPTERS: tuple[ToolAdapter, ...] = (
     SystemToolAdapter(),
     SearchToolAdapter(),
+    ClaudeToolAdapter(),
     OpenAIToolAdapter(),
 )
 
@@ -21,6 +23,7 @@ def resolve_tool_adapter(tool_definition: ToolDefinition) -> ToolAdapter | None:
 
 __all__ = [
     "ToolAdapter",
+    "ClaudeToolAdapter",
     "OpenAIToolAdapter",
     "SearchToolAdapter",
     "SystemToolAdapter",

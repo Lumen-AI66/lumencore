@@ -101,3 +101,29 @@ class AnalysisAgent(BaseAgent):
     def plan(self, task: dict[str, Any]) -> list[AgentStep]:
         return [self._build_openai_step(task, task_label="analysis-observation")]
 
+
+class OpenclawAgent(BaseAgent):
+    agent_type = "openclaw"
+    agent_id = "55555555-5555-4555-8555-555555555555"
+    name = "openclaw"
+    description = "Primary AI executor for Lumencore. Processes all operator commands via Claude. Used by Telegram interface."
+    tools = ("tool.claude.complete",)
+
+    def plan(self, task: dict[str, Any]) -> list[AgentStep]:
+        objective = str(task.get("objective") or task.get("query") or task.get("message") or "").strip()
+        source = str(task.get("source") or "operator")
+        return [AgentStep(
+            tool_name="tool.claude.complete",
+            connector_name="claude",
+            action="complete",
+            payload={
+                "prompt": objective,
+                "model": "claude-haiku-4-5-20251001",
+                "max_tokens": 1024,
+                "agent_type": self.agent_type,
+                "agent_name": self.name,
+                "task_label": "openclaw-execution",
+                "source": source,
+            },
+        )]
+

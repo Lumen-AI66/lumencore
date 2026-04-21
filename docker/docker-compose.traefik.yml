@@ -168,6 +168,25 @@ services:
     networks:
       - lumencore-internal
 
+  lumenclaw-bot:
+    build:
+      context: /opt/lumencore/lumencore/services/telegram
+      dockerfile: Dockerfile
+    image: lumenclaw-bot:phase3
+    container_name: lumenclaw-bot
+    restart: unless-stopped
+    env_file:
+      - /opt/lumencore/.env
+    environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_OWNER_CHAT_ID: ${TELEGRAM_OWNER_CHAT_ID}
+      LUMENCORE_API_URL: http://lumencore-api:8000
+    depends_on:
+      lumencore-api:
+        condition: service_healthy
+    networks:
+      - lumencore-internal
+
   lumencore-dashboard:
     build:
       context: /opt/lumencore/lumencore/deploy/dashboard

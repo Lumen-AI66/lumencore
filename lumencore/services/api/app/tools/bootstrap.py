@@ -6,6 +6,24 @@ from .registry import ToolRegistry, get_tool_registry
 
 PLACEHOLDER_TOOLS: tuple[ToolDefinition, ...] = (
     ToolDefinition(
+        tool_name="tool.claude.complete",
+        connector_name="claude",
+        action="complete",
+        description="Openclaw primary executor — Claude AI for governed operator command execution.",
+        risk_level=ToolRiskLevel.low,
+        read_only=True,
+        enabled_by_default=True,
+        tags=("claude", "anthropic", "llm", "read_only", "agent_sync", "openclaw"),
+        capability_metadata={
+            "phase": "openclaw",
+            "external_execution": True,
+            "provider": "anthropic",
+            "network_scope": "anthropic_only",
+        },
+        timeout_seconds=45,
+        audit_category="tool.connector",
+    ),
+    ToolDefinition(
         tool_name="tool.openai.complete",
         connector_name="openai",
         action="complete",
