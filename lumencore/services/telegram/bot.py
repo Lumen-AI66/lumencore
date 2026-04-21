@@ -20,6 +20,7 @@ LUMENCORE_API_URL = os.environ.get("LUMENCORE_API_URL", "http://lumencore-api:80
 OPENCLAW_AGENT_ID = "55555555-5555-4555-8555-555555555555"
 POLL_INTERVAL = 1.5
 POLL_TIMEOUT = 60
+DESKTOP_POLL_TIMEOUT = 120
 
 
 def _is_owner(update: Update) -> bool:
@@ -38,6 +39,29 @@ async def _send_command(text: str) -> dict[str, Any]:
         )
         resp.raise_for_status()
         return resp.json()
+
+
+async def _queue_desktop(command: str, chat_id: str) -> dict[str, Any]:
+    async with httpx.AsyncClient(timeout=10) as client:
+        resp = await client.post(
+            f"{LUMENCORE_API_URL}/api/desktop/queue",
+            json={"command": command, "telegram_chat_id": str(chat_id)},
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+
+async def _poll_desktop_result(task_id: str) -> dict[str, Any]:
+    deadline = time.monotonic() + DESKTOP_POLL_TIMEOUT
+    async with httpx.AsyncClient(timeout=10) as client:
+        while time.monotonic() < deadline:
+            resp = await client.get(f"{LUMENCORE_API_URL}/api/desktop/queue/{task_id}")
+            if resp.status_code == 200:
+                data = resp.json()
+                if data.get("status") in {"done", "failed"}:
+                    return data
+            await asyncio.sleep(2)
+    return {"status": "timeout", "result": None}
 
 
 async def _poll_result(command_id: str) -> dict[str, Any]:
@@ -84,6 +108,7 @@ def _extract_result(data: dict[str, Any]) -> str:
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat_id = update.effective_chat.id if update.effective_chat else None
     if not _is_owner(update):
         return
 
@@ -91,8 +116,31 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if not text:
         return
 
-    await update.message.reply_text("Verwerken...")
+    # Desktop execution: commando's die starten met ! worden lokaal uitgevoerd
+    if text.startswith("!"):
+        command = text[1:].strip()
+        if not command:
+            await update.message.reply_text("Gebruik: `! <commando>`  bijv. `! dir C:\\`", parse_mode="Markdown")
+            return
 
+        await update.message.reply_text(f"Uitvoeren op desktop: `{command}`", parse_mode="Markdown")
+        try:
+            task = await _queue_desktop(command, str(chat_id))
+            task_id = task.get("id")
+            result_data = await _poll_desktop_result(task_id)
+            status = result_data.get("status", "?")
+            output = result_data.get("result") or "(geen output)"
+            # Telegram max 4096 tekens
+            output = output[:3800]
+            reply = f"```\n{output}\n```\n_Status: {status}_"
+            await update.message.reply_text(reply, parse_mode="Markdown")
+        except Exception as exc:
+            logger.error("Desktop queue error: %s", exc)
+            await update.message.reply_text(f"Desktop fout: {exc}")
+        return
+
+    # AI commando via Openclaw
+    await update.message.reply_text("Verwerken...")
     try:
         run = await _send_command(text)
         command_id = run.get("id")
@@ -148,10 +196,33 @@ async def cmd_history(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         await update.message.reply_text(f"Fout: {exc}")
 
 
+async def cmd_pc(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Snelkoppeling: /pc <commando> voert direct uit op desktop."""
+    if not _is_owner(update):
+        return
+    args = context.args
+    if not args:
+        await update.message.reply_text("Gebruik: `/pc <commando>`", parse_mode="Markdown")
+        return
+    command = " ".join(args)
+    chat_id = str(update.effective_chat.id)
+    await update.message.reply_text(f"Uitvoeren: `{command}`", parse_mode="Markdown")
+    try:
+        task = await _queue_desktop(command, chat_id)
+        task_id = task.get("id")
+        result_data = await _poll_desktop_result(task_id)
+        output = (result_data.get("result") or "(geen output)")[:3800]
+        status = result_data.get("status", "?")
+        await update.message.reply_text(f"```\n{output}\n```\n_Status: {status}_", parse_mode="Markdown")
+    except Exception as exc:
+        await update.message.reply_text(f"Fout: {exc}")
+
+
 def main() -> None:
     app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
     app.add_handler(CommandHandler("status", cmd_status))
     app.add_handler(CommandHandler("history", cmd_history))
+    app.add_handler(CommandHandler("pc", cmd_pc))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     logger.info("LumenClaw bot gestart. Wachten op commando's van chat_id=%d", TELEGRAM_OWNER_CHAT_ID)
     app.run_polling(drop_pending_updates=True)
