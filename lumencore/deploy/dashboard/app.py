@@ -1,7 +1,15 @@
 """Lumencore Dashboard — AI Control Center"""
 import json
 import os
+import urllib.parse
 from http.server import BaseHTTPRequestHandler, HTTPServer
+
+from auth import (
+    PIN_LOGIN_HTML, PIN_SETUP_HTML,
+    get_session_from_cookie, is_locked_out,
+    is_pin_configured, is_valid_session,
+    logout, set_pin, verify_pin,
+)
 
 PORT = int(os.environ.get("PORT", 8080))
 API_BASE = os.environ.get("API_BASE_URL", "http://lumencore-api:8000")
@@ -1807,23 +1815,130 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         pass  # suppress access log noise
 
+    def _get_session_token(self) -> str | None:
+        return get_session_from_cookie(self.headers.get("Cookie"))
+
+    def _is_authenticated(self) -> bool:
+        return is_valid_session(self._get_session_token())
+
+    def _redirect(self, location: str) -> None:
+        self.send_response(302)
+        self.send_header("Location", location)
+        self.end_headers()
+
+    def _serve_page(self, html: str, status: int = 200) -> None:
+        data = html.encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+    def _handle_auth_post(self) -> None:
+        length = int(self.headers.get("Content-Length", 0))
+        raw = self.rfile.read(length).decode("utf-8") if length else ""
+        params = dict(urllib.parse.parse_qsl(raw))
+
+        if self.path == "/auth/setup":
+            pin = params.get("pin", "")
+            confirm = params.get("confirm", "")
+            if len(pin) != 4 or not pin.isdigit():
+                self._serve_page(PIN_SETUP_HTML.replace("__ERROR__", "PIN must be 4 digits"), 400)
+                return
+            if pin != confirm:
+                self._serve_page(PIN_SETUP_HTML.replace("__ERROR__", "PINs do not match"), 400)
+                return
+            set_pin(pin)
+            token = verify_pin(pin)
+            self.send_response(302)
+            self.send_header("Location", "/")
+            self.send_header("Set-Cookie", f"lc_session={token}; HttpOnly; SameSite=Strict; Path=/")
+            self.end_headers()
+            return
+
+        if self.path == "/auth/login":
+            locked, remaining = is_locked_out()
+            if locked:
+                page = PIN_LOGIN_HTML.replace("__ERROR__", f"Too many attempts. Wait {remaining}s.")
+                self._serve_page(page, 429)
+                return
+            pin = params.get("pin", "")
+            token = verify_pin(pin)
+            if token:
+                self.send_response(302)
+                self.send_header("Location", "/")
+                self.send_header("Set-Cookie", f"lc_session={token}; HttpOnly; SameSite=Strict; Path=/")
+                self.end_headers()
+            else:
+                locked, remaining = is_locked_out()
+                if locked:
+                    msg = f"Too many failed attempts. Locked for {remaining}s."
+                else:
+                    msg = "Incorrect PIN. Try again."
+                page = PIN_LOGIN_HTML.replace("__ERROR__", msg)
+                self._serve_page(page, 401)
+            return
+
+        if self.path == "/auth/logout":
+            token = self._get_session_token()
+            if token:
+                logout(token)
+            self.send_response(302)
+            self.send_header("Location", "/auth/login")
+            self.send_header("Set-Cookie", "lc_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0")
+            self.end_headers()
+            return
+
     def do_GET(self):
         if self.path.startswith("/proxy/"):
+            if not self._is_authenticated():
+                self._serve_page('{"error":"unauthorized"}', 401)
+                return
             self._proxy(self.path[7:], "GET", None)
-        else:
-            self._serve_html()
+            return
+
+        if self.path in ("/auth/login", "/auth/logout"):
+            self._redirect("/")
+            return
+
+        # Auth gate
+        if not is_pin_configured():
+            self._serve_page(PIN_SETUP_HTML.replace("__ERROR__", ""))
+            return
+        if not self._is_authenticated():
+            self._serve_page(PIN_LOGIN_HTML.replace("__ERROR__", ""))
+            return
+
+        self._serve_html()
 
     def do_POST(self):
+        if self.path in ("/auth/setup", "/auth/login", "/auth/logout"):
+            self._handle_auth_post()
+            return
+
         if self.path.startswith("/proxy/"):
+            if not self._is_authenticated():
+                err = b'{"error":"unauthorized"}'
+                self.send_response(401)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(err)))
+                self.end_headers()
+                self.wfile.write(err)
+                return
             length = int(self.headers.get("Content-Length", 0))
             body = self.rfile.read(length) if length else None
             self._proxy(self.path[7:], "POST", body)
-        else:
-            self.send_response(404)
-            self.end_headers()
+            return
+
+        self.send_response(404)
+        self.end_headers()
 
     def do_PUT(self):
         if self.path.startswith("/proxy/"):
+            if not self._is_authenticated():
+                self.send_response(401)
+                self.end_headers()
+                return
             length = int(self.headers.get("Content-Length", 0))
             body = self.rfile.read(length) if length else None
             self._proxy(self.path[7:], "PUT", body)
@@ -1833,6 +1948,10 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_DELETE(self):
         if self.path.startswith("/proxy/"):
+            if not self._is_authenticated():
+                self.send_response(401)
+                self.end_headers()
+                return
             self._proxy(self.path[7:], "DELETE", None)
         else:
             self.send_response(404)

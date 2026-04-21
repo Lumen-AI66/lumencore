@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git push:*)",
+      "Bash(python:*)",
+      "Bash(npm i:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"feat: Phase 3 Agent Memory Integration:*)",
+      "Bash(git commit -m \"docs: sync documentation to current implementation state:*)",
+      "Bash(git commit:*)",
+      "Bash(ssh:*)",
+      "Bash(docker compose:*)",
+      "Bash(curl:*)",
+      "Bash(start http://localhost)",
+      "Bash(docker info:*)",
+      "Bash(docker exec lumencore-postgres:*)",
+      "Bash(docker build:*)",
+      "Bash(python3:*)"
+    ]
+  }
+}
