@@ -67,9 +67,8 @@ class MexcConnector(Connector):
         api_secret = secrets.get(MEXC_API_SECRET_ENV) or os.environ.get(MEXC_API_SECRET_ENV, "")
         return api_key, api_secret
 
-    def _sign(self, params: dict, secret: str) -> str:
-        query = urllib.parse.urlencode(sorted(params.items()))
-        return hmac.new(secret.encode(), query.encode(), hashlib.sha256).hexdigest()
+    def _sign(self, query_string: str, secret: str) -> str:
+        return hmac.new(secret.encode(), query_string.encode(), hashlib.sha256).hexdigest()
 
     def _public_request(self, path: str, params: dict | None = None) -> Any:
         url = f"{MEXC_BASE_URL}{path}"
@@ -85,12 +84,14 @@ class MexcConnector(Connector):
             raise RuntimeError(f"MEXC connection error: {exc}") from exc
 
     def _signed_request(self, method: str, path: str, api_key: str, secret: str, params: dict | None = None, body: dict | None = None) -> Any:
-        params = params or {}
-        params["timestamp"] = str(int(time.time() * 1000))
-        params["recvWindow"] = "5000"
-        params["signature"] = self._sign(params, secret)
-
-        url = f"{MEXC_BASE_URL}{path}?" + urllib.parse.urlencode(params)
+        p: dict = {}
+        if params:
+            p.update({k: v for k, v in params.items()})
+        p["timestamp"] = int(time.time() * 1000)
+        # Build query string and sign
+        qs = urllib.parse.urlencode(p)
+        sig = hmac.new(secret.encode(), qs.encode(), hashlib.sha256).hexdigest()
+        url = f"{MEXC_BASE_URL}{path}?{qs}&signature={sig}"
         data = json.dumps(body).encode() if body else None
         req = urllib.request.Request(
             url,
