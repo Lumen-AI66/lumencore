@@ -27,6 +27,7 @@ from .routes.credentials import router as credentials_router
 from .routes.desktop import router as desktop_router
 from .routes.workspaces import router as workspaces_router
 from .routes.orchestrate import router as orchestrate_router
+from .routes.trading import router as trading_router
 from .services.deployment.deployment_service import get_deployment_state, mark_failed_restart, record_deploy, record_restart
 from .services.runtime_health import get_runtime_health_snapshot
 from .tools.bootstrap import register_placeholder_tools
@@ -74,6 +75,7 @@ app.include_router(credentials_router)
 app.include_router(desktop_router)
 app.include_router(workspaces_router)
 app.include_router(orchestrate_router)
+app.include_router(trading_router)
 
 
 
