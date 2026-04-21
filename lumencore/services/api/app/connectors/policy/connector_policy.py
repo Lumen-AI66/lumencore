@@ -16,6 +16,7 @@ _DEFAULT_ENABLEMENT: dict[str, bool] = {
     "git": False,
     "search": False,
     "openai": False,
+    "claude": False,
 }
 
 
@@ -25,9 +26,9 @@ def load_connector_enablement() -> dict[str, bool]:
     if not isinstance(raw, dict):
         return config
 
-    for name in config:
-        if name in raw:
-            config[name] = bool(raw[name])
+    # Apply all keys from yaml, not just defaults
+    for name, val in raw.items():
+        config[str(name).strip()] = bool(val)
     return config
 
 
@@ -41,7 +42,7 @@ def evaluate_connector_policy(
     allowed_project_ids: set[str] | None = None,
 ) -> ConnectorPolicyResult:
     normalized_tenant = (tenant_id or "").strip() or "owner"
-    if normalized_tenant != "owner":
+    if normalized_tenant not in {"owner", "telegram"}:
         return ConnectorPolicyResult(False, "tenant is not allowed in current phase", "tenant_not_allowed")
 
     enablement = load_connector_enablement()
