@@ -5,10 +5,12 @@ from typing import Any
 from ..config import load_yaml_config
 from ..connectors.base.connector import Connector
 from ..connectors.base.registry import list_connector_instances
+from ..connectors.claude.claude_connector import ClaudeConnector, ANTHROPIC_API_KEY_ENV
 from ..connectors.git.git_connector import GitConnector
+from ..connectors.openai.openai_connector import OpenAIConnector
 from ..connectors.search.search_connector import SUPPORTED_SEARCH_PROVIDERS, SearchConnector
 from ..schemas.connectors import ConnectorItem, ConnectorListResponse, ConnectorStatusResponse
-from ..secrets.secret_manager import GITHUB_TOKEN_ENV, SEARCH_PROVIDER_SECRET_ENV, SecretManager
+from ..secrets.secret_manager import GITHUB_TOKEN_ENV, OPENAI_API_KEY_ENV, SEARCH_PROVIDER_SECRET_ENV, SecretManager
 
 
 def _load_connector_enablement() -> dict[str, bool]:
@@ -50,6 +52,30 @@ def _build_runtime_status(
         if not enabled:
             return "disabled", False, runtime_metadata
         if available_providers:
+            return "ready", True, runtime_metadata
+        return "misconfigured", False, runtime_metadata
+
+    if isinstance(connector, ClaudeConnector):
+        configured = secret_manager.has_env_secret(ANTHROPIC_API_KEY_ENV)
+        runtime_metadata = {
+            "required_env_secrets": [ANTHROPIC_API_KEY_ENV],
+            "configured_env_secrets": [ANTHROPIC_API_KEY_ENV] if configured else [],
+        }
+        if not enabled:
+            return "disabled", False, runtime_metadata
+        if configured:
+            return "ready", True, runtime_metadata
+        return "misconfigured", False, runtime_metadata
+
+    if isinstance(connector, OpenAIConnector):
+        configured = secret_manager.has_env_secret(OPENAI_API_KEY_ENV)
+        runtime_metadata = {
+            "required_env_secrets": [OPENAI_API_KEY_ENV],
+            "configured_env_secrets": [OPENAI_API_KEY_ENV] if configured else [],
+        }
+        if not enabled:
+            return "disabled", False, runtime_metadata
+        if configured:
             return "ready", True, runtime_metadata
         return "misconfigured", False, runtime_metadata
 
