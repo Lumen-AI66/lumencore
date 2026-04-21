@@ -267,8 +267,7 @@ def resolve_registry_definition_for_agent_task(*, agent_type: str | None = None,
         if not registry_key:
             raise ValueError("requested agent_id is not registry-backed for agent_task")
         definition = get_agent_definition(registry_key)
-        if agent_type and str(definition.agent_type).lower() != str(agent_type).strip().lower():
-            raise ValueError("requested agent_id does not match the planned built-in agent_type")
+        # Allow explicit agent_id override (e.g. openclaw overrides planned agent_type)
         return definition
 
     if agent_type:
