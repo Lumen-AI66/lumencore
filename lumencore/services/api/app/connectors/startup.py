@@ -3,6 +3,7 @@ from __future__ import annotations
 from .base.registry import ConnectorRegistry, get_registry
 from .claude.claude_connector import ClaudeConnector
 from .git.git_connector import GitConnector
+from .mexc.mexc_connector import MexcConnector
 from .n8n.n8n_connector import N8nConnector
 from .openai.openai_connector import OpenAIConnector
 from .search.search_connector import SearchConnector
@@ -16,5 +17,6 @@ def register_default_connectors(registry: ConnectorRegistry | None = None) -> Co
     target.register_connector(OpenAIConnector())
     target.register_connector(ClaudeConnector())
     target.register_connector(N8nConnector())
+    target.register_connector(MexcConnector())
     return target
 

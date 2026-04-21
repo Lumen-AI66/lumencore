@@ -4,6 +4,7 @@ CONNECTOR_ENABLEMENT:
   openai: true
   claude: true
   n8n: true
+  mexc: true
 
 AGENT_CONNECTOR_PERMISSIONS:
   command-system:
@@ -36,3 +37,15 @@ AGENT_CONNECTOR_PERMISSIONS:
       - workflow.execute
       - execution.list
       - execution.get
+    mexc:
+      - account.balance
+      - account.info
+      - market.ticker
+      - market.orderbook
+      - market.klines
+      - order.place
+      - order.cancel
+      - order.get
+      - order.list_open
+      - order.list_history
+      - position.list

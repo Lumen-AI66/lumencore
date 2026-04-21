@@ -111,7 +111,11 @@ class OpenclawOrchestrator:
             if any(kw in tool for kw in ["payment", "transfer", "publish", "deploy", "delete"]):
                 requires_approval = True
                 approval_items.append(f"High-stakes action: {desc}")
-            if any(kw in desc.lower() for kw in ["betalen", "kopen", "publiceren", "verwijderen", "deploy"]):
+            # MEXC trading actions always need approval
+            if any(kw in tool for kw in ["mexc.order.place", "mexc.order.cancel"]):
+                requires_approval = True
+                approval_items.append(f"Trading order requires approval: {desc}")
+            if any(kw in desc.lower() for kw in ["betalen", "kopen", "publiceren", "verwijderen", "deploy", "order plaatsen", "verkopen"]):
                 requires_approval = True
                 approval_items.append(f"Needs approval: {desc}")
 

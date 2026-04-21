@@ -7,6 +7,7 @@ from ..connectors.base.connector import Connector
 from ..connectors.base.registry import list_connector_instances
 from ..connectors.claude.claude_connector import ClaudeConnector, ANTHROPIC_API_KEY_ENV
 from ..connectors.git.git_connector import GitConnector
+from ..connectors.mexc.mexc_connector import MexcConnector, MEXC_API_KEY_ENV, MEXC_API_SECRET_ENV
 from ..connectors.n8n.n8n_connector import N8nConnector, N8N_API_TOKEN_ENV
 from ..connectors.openai.openai_connector import OpenAIConnector
 from ..connectors.search.search_connector import SUPPORTED_SEARCH_PROVIDERS, SearchConnector
@@ -85,6 +86,25 @@ def _build_runtime_status(
         runtime_metadata = {
             "required_env_secrets": [N8N_API_TOKEN_ENV],
             "configured_env_secrets": [N8N_API_TOKEN_ENV] if configured else [],
+        }
+        if not enabled:
+            return "disabled", False, runtime_metadata
+        if configured:
+            return "ready", True, runtime_metadata
+        return "misconfigured", False, runtime_metadata
+
+    if isinstance(connector, MexcConnector):
+        key_configured = secret_manager.has_env_secret(MEXC_API_KEY_ENV)
+        secret_configured = secret_manager.has_env_secret(MEXC_API_SECRET_ENV)
+        configured = key_configured and secret_configured
+        runtime_metadata = {
+            "required_env_secrets": [MEXC_API_KEY_ENV, MEXC_API_SECRET_ENV],
+            "configured_env_secrets": (
+                [MEXC_API_KEY_ENV, MEXC_API_SECRET_ENV] if configured
+                else [k for k, v in [(MEXC_API_KEY_ENV, key_configured), (MEXC_API_SECRET_ENV, secret_configured)] if v]
+            ),
+            "trading_enabled": configured,
+            "approval_required_for": ["order.place", "order.cancel"],
         }
         if not enabled:
             return "disabled", False, runtime_metadata
