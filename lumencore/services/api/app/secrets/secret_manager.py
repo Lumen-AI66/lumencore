@@ -7,6 +7,7 @@ from .secret_policy import validate_scope
 from .secret_provider import EnvironmentSecretProvider, FileSecretProvider
 
 GITHUB_TOKEN_ENV = "LUMENCORE_GITHUB_TOKEN"
+N8N_API_TOKEN_ENV = "N8N_API_TOKEN"
 BRAVE_API_KEY_ENV = "LUMENCORE_BRAVE_API_KEY"
 TAVILY_API_KEY_ENV = "LUMENCORE_TAVILY_API_KEY"
 EXA_API_KEY_ENV = "LUMENCORE_EXA_API_KEY"

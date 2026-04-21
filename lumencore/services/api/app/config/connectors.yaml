@@ -1,8 +1,10 @@
 CONNECTOR_ENABLEMENT:
-  git: false
+  git: true
   search: true
   openai: true
   claude: true
+  n8n: true
+
 AGENT_CONNECTOR_PERMISSIONS:
   command-system:
     search:
@@ -15,8 +17,22 @@ AGENT_CONNECTOR_PERMISSIONS:
   44444444-4444-4444-8444-444444444444:
     openai:
       - complete
-  # openclaw — primary executor via Telegram
+  # openclaw — primary executor
   55555555-5555-4555-8555-555555555555:
     claude:
       - complete
-
+    search:
+      - web_search
+    git:
+      - github.get_file
+      - github.get_repo
+      - github.list_pull_requests
+    n8n:
+      - workflow.list
+      - workflow.get
+      - workflow.create
+      - workflow.activate
+      - workflow.deactivate
+      - workflow.execute
+      - execution.list
+      - execution.get

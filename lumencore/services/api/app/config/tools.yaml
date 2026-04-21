@@ -4,6 +4,15 @@ TOOL_ENABLEMENT:
   search.web_search: true
   tool.openai.complete: true
   tool.claude.complete: true
+  n8n.workflow.list: true
+  n8n.workflow.get: true
+  n8n.workflow.create: true
+  n8n.workflow.activate: true
+  n8n.workflow.deactivate: true
+  n8n.workflow.execute: true
+  n8n.execution.list: true
+  n8n.execution.get: true
+
 AGENT_TOOL_PERMISSIONS:
   command-system:
     - system.echo
@@ -19,8 +28,16 @@ AGENT_TOOL_PERMISSIONS:
   44444444-4444-4444-8444-444444444444:
     - system.echo
     - tool.openai.complete
-  # openclaw — primary executor via Telegram
+  # openclaw — primary executor
   55555555-5555-4555-8555-555555555555:
     - tool.claude.complete
     - system.echo
-
+    - search.web_search
+    - n8n.workflow.list
+    - n8n.workflow.get
+    - n8n.workflow.create
+    - n8n.workflow.activate
+    - n8n.workflow.deactivate
+    - n8n.workflow.execute
+    - n8n.execution.list
+    - n8n.execution.get
