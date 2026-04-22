@@ -29,6 +29,8 @@ from typing import Any
 logger = logging.getLogger("trading_engine")
 
 LUMENCORE_API_URL = os.environ.get("LUMENCORE_API_URL", "http://localhost:8000")
+MEXC_API_KEY_ENV = "MEXC_API_KEY"
+MEXC_API_SECRET_ENV = "MEXC_API_SECRET"
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_OWNER_CHAT_ID = os.environ.get("TELEGRAM_OWNER_CHAT_ID", "")
 
@@ -115,6 +117,32 @@ def _mexc_post(path: str, payload: dict) -> dict:
     except Exception as exc:
         logger.error("MEXC API error: %s", exc)
         return {"error": str(exc)}
+
+
+def _fetch_real_balance() -> float:
+    """Fetch real USDT balance directly from MEXC (used at startup)."""
+    import hashlib as _hl
+    import hmac as _hmac
+    import urllib.parse as _up
+    api_key = os.environ.get(MEXC_API_KEY_ENV, "")
+    secret = os.environ.get(MEXC_API_SECRET_ENV, "")
+    if not api_key or not secret:
+        return 0.0
+    try:
+        import urllib.request as _ur
+        p = {"timestamp": int(time.time() * 1000)}
+        qs = _up.urlencode(p)
+        sig = _hmac.new(secret.encode(), qs.encode(), _hl.sha256).hexdigest()
+        url = f"https://api.mexc.com/api/v3/account?{qs}&signature={sig}"
+        req = _ur.Request(url, headers={"X-MEXC-APIKEY": api_key, "Content-Type": "application/json"})
+        with _ur.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+            for b in data.get("balances", []):
+                if b.get("asset") == "USDT":
+                    return float(b.get("free", 0)) + float(b.get("locked", 0))
+    except Exception as exc:
+        logger.warning("Could not fetch real balance: %s", exc)
+    return 0.0
 
 
 def _get_balance() -> float:
@@ -455,10 +483,10 @@ def start_trading(config_override: dict | None = None) -> dict:
         if config_override:
             _state.config.update(config_override)
 
-        # Fetch starting balance
-        # For now, set a placeholder — real balance fetched in loop
-        _state.start_balance_usdt = 100.0  # will be updated on first balance call
-        _state.current_balance_usdt = 100.0
+        # Fetch real starting balance from MEXC
+        real_balance = _fetch_real_balance()
+        _state.start_balance_usdt = real_balance if real_balance > 0 else 0.0
+        _state.current_balance_usdt = _state.start_balance_usdt
 
     _thread = threading.Thread(target=_trading_loop, daemon=True, name="openclaw-trader")
     _thread.start()
