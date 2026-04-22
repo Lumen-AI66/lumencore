@@ -523,6 +523,12 @@ label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 5px
       <span class="nav-icon">⬥</span><span class="nav-label">Health</span>
     </div>
 
+    <div class="nav-section-label">Workplaces</div>
+    <div class="nav-item" onclick="showView('trading',this)">
+      <span class="nav-icon">📈</span><span class="nav-label">Trading Bot</span>
+      <span class="nav-badge" id="nav-trading-badge" style="background:var(--green);color:#000;font-size:9px;padding:1px 5px;border-radius:8px;font-weight:700;display:none">LIVE</span>
+    </div>
+
     <div class="nav-section-label">Coming Soon</div>
     <div class="nav-item nav-soon">
       <span class="nav-icon">▤</span><span class="nav-label">Content</span>
@@ -805,6 +811,77 @@ label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 5px
           <div id="ws-workflow-list"><div class="loading">Loading…</div></div>
           <div style="margin-top:14px">
             <button class="btn btn-ghost btn-sm" onclick="openModal('wf-modal')">+ Add Workflow</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- === VIEW: TRADING WORKSPACE === -->
+    <div class="view" id="view-trading">
+      <div class="section-header">
+        <div>
+          <div class="section-title">📈 Trading Bot Workspace</div>
+          <div class="section-sub">Openclaw MEXC — live posities, statistieken en analyses</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span id="trading-status-badge" style="padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;background:var(--bg4);color:var(--muted2)">● GESTOPT</span>
+          <button class="btn btn-primary btn-sm" onclick="tradingAction('start')">▶ START</button>
+          <button class="btn btn-ghost btn-sm" onclick="tradingAction('stop')">■ STOP</button>
+        </div>
+      </div>
+
+      <!-- Stats row -->
+      <div class="grid grid-4" style="margin-bottom:16px">
+        <div class="card" style="text-align:center">
+          <div style="font-size:11px;color:var(--muted2);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px">Balance</div>
+          <div id="t-balance" style="font-size:26px;font-weight:700;color:var(--cyan)">—</div>
+          <div style="font-size:11px;color:var(--muted2)">USDT</div>
+        </div>
+        <div class="card" style="text-align:center">
+          <div style="font-size:11px;color:var(--muted2);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px">PnL Vandaag</div>
+          <div id="t-pnl" style="font-size:26px;font-weight:700;color:var(--green)">—</div>
+          <div id="t-pnl-pct" style="font-size:11px;color:var(--muted2)">—</div>
+        </div>
+        <div class="card" style="text-align:center">
+          <div style="font-size:11px;color:var(--muted2);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px">Trades</div>
+          <div id="t-trades" style="font-size:26px;font-weight:700;color:var(--text)">—</div>
+          <div id="t-winrate" style="font-size:11px;color:var(--muted2)">W/L —/—</div>
+        </div>
+        <div class="card" style="text-align:center">
+          <div style="font-size:11px;color:var(--muted2);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px">Open Posities</div>
+          <div id="t-positions" style="font-size:26px;font-weight:700;color:var(--yellow)">—</div>
+          <div style="font-size:11px;color:var(--muted2)">max 5</div>
+        </div>
+      </div>
+
+      <!-- Two columns: config + wallet -->
+      <div class="grid grid-2" style="margin-bottom:16px">
+        <div class="card">
+          <div class="card-title">⚙️ Strategie Instellingen</div>
+          <div id="t-config" style="display:grid;gap:8px;margin-top:10px">
+            <div class="loading">Laden…</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">💰 MEXC Wallet</div>
+          <div id="t-wallet" style="display:grid;gap:8px;margin-top:10px">
+            <div class="loading">Laden…</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Open positions + scan log -->
+      <div class="grid grid-2">
+        <div class="card">
+          <div class="card-title">🔴 Open Posities</div>
+          <div id="t-open-pos" style="margin-top:10px"><div class="muted" style="font-size:13px">Geen open posities</div></div>
+        </div>
+        <div class="card">
+          <div class="card-title">🕒 Laatste Scan</div>
+          <div id="t-last-scan" style="margin-top:10px;font-size:12px;color:var(--muted2)">—</div>
+          <div style="margin-top:16px">
+            <div class="card-title">📊 Symbolen actief</div>
+            <div id="t-symbols" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px"></div>
           </div>
         </div>
       </div>
@@ -1805,6 +1882,124 @@ async function deleteCred(id, name) {
 // === BOOT ===
 loadOverview();
 setInterval(() => { if (currentView === 'overview') loadOverview(); }, 12000);
+
+// === TRADING WORKSPACE ===
+let tradingInterval = null;
+
+async function loadTradingWorkspace() {
+  try {
+    // Load trading status
+    const [statusRes, balanceRes] = await Promise.all([
+      fetch('/proxy/api/trading/status'),
+      fetch('/proxy/api/trading/mexc/balance'),
+    ]);
+    const s = await statusRes.json();
+    const b = await balanceRes.json();
+
+    // Status badge + nav badge
+    const running = s.running && !s.paused;
+    const badge = document.getElementById('trading-status-badge');
+    const navBadge = document.getElementById('nav-trading-badge');
+    if (badge) {
+      badge.textContent = s.paused ? '⏸ GEPAUZEERD' : (s.running ? '● ACTIEF' : '● GESTOPT');
+      badge.style.background = s.running ? 'var(--green)' : 'var(--red)';
+      badge.style.color = s.running ? '#000' : '#fff';
+    }
+    if (navBadge) navBadge.style.display = s.running ? 'inline' : 'none';
+
+    // Stats
+    const pnl = s.daily_pnl_usdt || 0;
+    const pnlPct = s.daily_pnl_pct || 0;
+    const pnlColor = pnl >= 0 ? 'var(--green)' : 'var(--red)';
+    setText('t-balance', '$' + (s.current_balance_usdt || 0).toFixed(2));
+    const pnlEl = document.getElementById('t-pnl');
+    if (pnlEl) { pnlEl.textContent = (pnl >= 0 ? '+$' : '-$') + Math.abs(pnl).toFixed(2); pnlEl.style.color = pnlColor; }
+    setText('t-pnl-pct', (pnlPct >= 0 ? '+' : '') + pnlPct.toFixed(2) + '%');
+    setText('t-trades', s.trades_today || 0);
+    setText('t-winrate', `W/L ${s.wins_today||0}/${s.losses_today||0}`);
+    setText('t-positions', s.open_positions || 0);
+
+    // Last scan
+    const scanEl = document.getElementById('t-last-scan');
+    if (scanEl && s.last_scan) {
+      const d = new Date(s.last_scan);
+      scanEl.textContent = 'Laatste scan: ' + d.toLocaleTimeString('nl-NL');
+    }
+
+    // Config
+    const cfg = s.config || {};
+    const cfgEl = document.getElementById('t-config');
+    if (cfgEl) cfgEl.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px">
+        <div style="color:var(--muted2)">Risico/trade</div><div style="font-weight:600">${cfg.risk_per_trade_pct}%</div>
+        <div style="color:var(--muted2)">Stop-loss</div><div style="font-weight:600">${cfg.stop_loss_pct}%</div>
+        <div style="color:var(--muted2)">Take-profit</div><div style="font-weight:600">${cfg.take_profit_pct}%</div>
+        <div style="color:var(--muted2)">Scan interval</div><div style="font-weight:600">${cfg.scan_interval_seconds}s</div>
+        <div style="color:var(--muted2)">RSI band</div><div style="font-weight:600">${cfg.rsi_oversold||40} / ${cfg.rsi_overbought||60}</div>
+        <div style="color:var(--muted2)">Max posities</div><div style="font-weight:600">${cfg.max_open_positions}</div>
+        <div style="color:var(--muted2)">Dagdoel</div><div style="font-weight:600;color:var(--green)">+${cfg.daily_profit_target_pct}%</div>
+        <div style="color:var(--muted2)">Max verlies</div><div style="font-weight:600;color:var(--red)">-${cfg.daily_loss_limit_pct}%</div>
+      </div>`;
+
+    // Symbols
+    const symEl = document.getElementById('t-symbols');
+    if (symEl && cfg.symbols) {
+      symEl.innerHTML = cfg.symbols.map(sym =>
+        `<span style="background:var(--bg4);border:1px solid var(--border2);padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600">${sym.replace('USDT','')}</span>`
+      ).join('');
+    }
+
+    // Wallet
+    const walletEl = document.getElementById('t-wallet');
+    if (walletEl && b.all_balances) {
+      const rows = b.all_balances
+        .filter(x => parseFloat(x.free||0) > 0 || parseFloat(x.locked||0) > 0)
+        .map(x => `
+          <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid var(--border2)">
+            <span style="font-weight:600;color:var(--cyan)">${x.asset}</span>
+            <span>${parseFloat(x.free).toFixed(4)} <span style="color:var(--muted2);font-size:11px">vrij</span></span>
+          </div>`).join('');
+      walletEl.innerHTML = rows || '<div style="color:var(--muted2);font-size:13px">Geen saldo</div>';
+    }
+
+    // Open positions
+    const posEl = document.getElementById('t-open-pos');
+    if (posEl) {
+      if (!s.open_positions || s.open_positions === 0) {
+        posEl.innerHTML = '<div style="color:var(--muted2);font-size:13px">Geen open posities</div>';
+      }
+    }
+
+  } catch(e) {
+    console.warn('Trading load error:', e);
+  }
+}
+
+function setText(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
+async function tradingAction(action) {
+  try {
+    const r = await fetch('/proxy/api/trading/' + action, { method: 'POST', headers: {'Content-Type':'application/json'}, body: '{}' });
+    const d = await r.json();
+    toast(d.message || action + ' uitgevoerd');
+    setTimeout(loadTradingWorkspace, 1500);
+  } catch(e) { toast('Fout: ' + e.message); }
+}
+
+// Hook into showView for trading auto-refresh
+const _origShowView = showView;
+showView = function(name, el) {
+  _origShowView(name, el);
+  if (name === 'trading') {
+    loadTradingWorkspace();
+    if (!tradingInterval) tradingInterval = setInterval(loadTradingWorkspace, 10000);
+  } else {
+    if (tradingInterval) { clearInterval(tradingInterval); tradingInterval = null; }
+  }
+};
 </script>
 </body>
 </html>
