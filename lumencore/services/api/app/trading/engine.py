@@ -36,15 +36,22 @@ TELEGRAM_OWNER_CHAT_ID = os.environ.get("TELEGRAM_OWNER_CHAT_ID", "")
 
 # Trading config defaults — can be overridden at runtime
 DEFAULT_CONFIG = {
-    "symbols": ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT"],
-    "risk_per_trade_pct": 2.0,          # % of balance risked per trade
-    "stop_loss_pct": 1.5,               # stop-loss below entry
-    "take_profit_pct": 3.0,             # take-profit above entry
-    "max_open_positions": 3,
-    "daily_loss_limit_pct": 10.0,       # auto-stop if daily loss exceeds this
-    "daily_profit_target_pct": 5.0,     # celebrate + optionally pause when reached
-    "scan_interval_seconds": 60,        # how often to scan for signals
-    "min_volume_usdt": 1_000_000,       # skip illiquid markets
+    "symbols": [
+        "BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT",
+        "XRPUSDT", "DOGEUSDT", "ADAUSDT", "AVAXUSDT",
+        "LINKUSDT", "DOTUSDT", "MATICUSDT", "LTCUSDT",
+    ],
+    "risk_per_trade_pct": 5.0,          # % of balance risked per trade (was 2%)
+    "stop_loss_pct": 1.0,               # tighter stop-loss (was 1.5%)
+    "take_profit_pct": 2.0,             # quicker take-profit (was 3%)
+    "max_open_positions": 5,            # more concurrent trades (was 3)
+    "daily_loss_limit_pct": 15.0,       # higher loss tolerance (was 10%)
+    "daily_profit_target_pct": 10.0,    # higher daily target (was 5%)
+    "scan_interval_seconds": 30,        # scan every 30s (was 60s)
+    "min_volume_usdt": 500_000,         # lower volume threshold (was 1M)
+    "rsi_oversold": 40,                 # wider RSI band (was 35)
+    "rsi_overbought": 60,               # wider RSI band (was 65)
+    "min_confidence": 0.35,             # lower confidence threshold (was 0.5)
 }
 
 
@@ -241,16 +248,20 @@ def _analyze_signal(symbol: str) -> TradeSignal | None:
     confidence = 0.0
     reason = ""
 
-    if rsi < 35 and ema9 > ema21:
+    rsi_oversold = _state.config.get("rsi_oversold", 40)
+    rsi_overbought = _state.config.get("rsi_overbought", 60)
+    min_confidence = _state.config.get("min_confidence", 0.35)
+
+    if rsi < rsi_oversold and ema9 > ema21:
         direction = "BUY"
-        confidence = min(0.9, (35 - rsi) / 35 + (vol_ratio - 1) * 0.1)
-        reason = f"RSI oversold ({rsi:.1f}), EMA bullish crossover, vol x{vol_ratio:.1f}"
-    elif rsi > 65 and ema9 < ema21:
+        confidence = min(0.9, (rsi_oversold - rsi) / rsi_oversold + (vol_ratio - 1) * 0.1)
+        reason = f"RSI oversold ({rsi:.1f}), EMA bullish, vol x{vol_ratio:.1f}"
+    elif rsi > rsi_overbought and ema9 < ema21:
         direction = "SELL"
-        confidence = min(0.9, (rsi - 65) / 35 + (vol_ratio - 1) * 0.1)
+        confidence = min(0.9, (rsi - rsi_overbought) / (100 - rsi_overbought) + (vol_ratio - 1) * 0.1)
         reason = f"RSI overbought ({rsi:.1f}), EMA bearish, vol x{vol_ratio:.1f}"
 
-    if not direction or confidence < 0.4:
+    if not direction or confidence < min_confidence:
         return None
 
     config = _state.config
@@ -435,15 +446,18 @@ def _trading_loop() -> None:
                 max_pos = _state.config["max_open_positions"]
 
             if n_open < max_pos:
+                min_conf = _state.config.get("min_confidence", 0.35)
                 for symbol in _state.config["symbols"]:
+                    with _lock:
+                        n_open = len(_state.open_positions)
+                        if n_open >= max_pos:
+                            break
+                        already_open = any(p["symbol"] == symbol for p in _state.open_positions)
+                    if already_open:
+                        continue
                     signal = _analyze_signal(symbol)
-                    if signal and signal.confidence >= 0.5:
-                        # Don't double-open same symbol
-                        with _lock:
-                            already_open = any(p["symbol"] == symbol for p in _state.open_positions)
-                        if not already_open:
-                            _execute_trade(signal)
-                            break  # one trade per scan cycle
+                    if signal and signal.confidence >= min_conf:
+                        _execute_trade(signal)
 
             with _lock:
                 _state.last_scan = datetime.now(timezone.utc).isoformat()
